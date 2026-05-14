@@ -6,11 +6,13 @@ import { ScoreDisplay } from "./components/ScoreDisplay";
 import { pokemonList } from "./data/pokemon";
 import { useSfx } from "./hooks/useSfx";
 import { usePokemonGame } from "./hooks/usePokemonGame";
+import { useSpeechInput } from "./hooks/useSpeechInput";
 import { createResultText } from "./utils/result";
 
 export default function App() {
   const game = usePokemonGame(pokemonList);
   const sfx = useSfx();
+  const speech = useSpeechInput((text) => game.submitAnswer(text));
   const previousPhase = useRef(game.phase);
   const [shareStatus, setShareStatus] = useState("");
 
@@ -40,9 +42,16 @@ export default function App() {
     if (game.phase === "correct") sfx.play("correct");
     if (game.phase === "wrong") sfx.play("wrong");
     if (game.phase === "skipped") sfx.play("skip");
+    if (game.phase === "timeout") sfx.play("timeout");
 
     previousPhase.current = game.phase;
   }, [game.phase, sfx]);
+
+  useEffect(() => {
+    if (game.phase !== "playing" && speech.listening) {
+      speech.stop();
+    }
+  }, [game.phase, speech]);
 
   useEffect(() => {
     if (game.phase !== "finished" && shareStatus) {
@@ -120,16 +129,24 @@ export default function App() {
           onStart={game.start}
           onShareResult={shareResult}
           roundLimit={game.roundLimit}
+          roundSeconds={game.roundSeconds}
           shareStatus={shareStatus}
           setDifficulty={game.setDifficulty}
+          timeLeft={game.timeLeft}
           total={game.total}
         />
         <AnswerBox
           disabled={!game.canAnswer}
+          speechError={speech.error}
+          speechInterimText={speech.interimText}
+          speechListening={speech.listening}
+          speechSupported={speech.supported}
           value={game.answer}
           onChange={game.setAnswer}
           onSubmit={game.submit}
           onNext={game.next}
+          onVoiceStart={speech.start}
+          onVoiceStop={speech.stop}
           revealed={game.revealed}
         />
       </ConsoleFrame>

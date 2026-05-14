@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 
-type SoundName = "start" | "next" | "correct" | "wrong" | "skip";
+type SoundName = "start" | "next" | "correct" | "wrong" | "skip" | "timeout";
 
 const MUTED_KEY = "who-am-i-muted";
 
@@ -47,7 +47,7 @@ function playPattern(name: SoundName) {
     return;
   }
 
-  if (name === "wrong") {
+  if (name === "wrong" || name === "timeout") {
     playTone(context, 180, now, 0.12, 0.045);
     playTone(context, 130, now + 0.12, 0.16, 0.04);
     return;

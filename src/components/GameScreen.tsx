@@ -12,8 +12,10 @@ type GameScreenProps = {
   onStart: () => void;
   onShareResult: () => void;
   roundLimit: number;
+  roundSeconds: number;
   shareStatus: string;
   setDifficulty: (difficulty: Difficulty) => void;
+  timeLeft: number;
   total: number;
 };
 
@@ -27,12 +29,16 @@ export function GameScreen({
   onStart,
   onShareResult,
   roundLimit,
+  roundSeconds,
   shareStatus,
   setDifficulty,
+  timeLeft,
   total,
 }: GameScreenProps) {
   const isReady = phase === "ready";
   const isFinished = phase === "finished";
+  const timeRatio = Math.max(0, Math.min(1, timeLeft / roundSeconds));
+  const isTimeUrgent = phase === "playing" && timeLeft <= 3;
 
   return (
     <div className={`game-screen phase-${phase}`}>
@@ -93,9 +99,10 @@ export function GameScreen({
               ROUND {Math.min(total + 1, roundLimit)}/{roundLimit}
             </p>
             <p className="question">{revealed ? "就是它！" : "我是谁？"}</p>
-            <div className="power-meter" aria-hidden="true">
-              <span />
+            <div className={isTimeUrgent ? "power-meter urgent" : "power-meter"} aria-label={`剩余 ${timeLeft} 秒`}>
+              <span style={{ width: `${timeRatio * 100}%` }} />
             </div>
+            <p className={isTimeUrgent ? "timer-text urgent" : "timer-text"}>{timeLeft}s</p>
             <p className="feedback">{feedback}</p>
             <p className="brand">
               POCKET

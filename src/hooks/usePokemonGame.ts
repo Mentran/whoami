@@ -8,6 +8,7 @@ export type Phase =
   | "correct"
   | "wrong"
   | "skipped"
+  | "timeout"
   | "transitioning"
   | "finished";
 export type Difficulty = "easy" | "normal" | "hard";
@@ -16,6 +17,7 @@ const BEST_KEY = "who-am-i-best";
 const ENTERING_MS = 620;
 const TRANSITION_MS = 420;
 const ROUND_LIMIT = 10;
+const ROUND_SECONDS = 10;
 const EASY_POOL = new Set([
   1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 16, 25, 26, 35, 36, 39, 52, 54, 58, 74, 79, 81, 92, 94, 95,
   104, 113, 129, 130, 131, 133, 134, 135, 136, 143, 150, 151,
@@ -87,16 +89,40 @@ export function usePokemonGame(list: Pokemon[]) {
   const [notice, setNotice] = useState("");
   const [revealed, setRevealed] = useState(false);
   const [phase, setPhase] = useState<Phase>("ready");
+  const [timeLeft, setTimeLeft] = useState(ROUND_SECONDS);
   const [hit, setHit] = useState(0);
   const [total, setTotal] = useState(0);
   const [best, setBest] = useState(loadBest);
   const phaseTimer = useRef<number | null>(null);
+  const roundSettled = useRef(false);
 
   useEffect(() => {
     return () => {
       if (phaseTimer.current) window.clearTimeout(phaseTimer.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (phase !== "playing") return undefined;
+
+    setTimeLeft(ROUND_SECONDS);
+    const countdownTimer = window.setInterval(() => {
+      setTimeLeft((currentTime) => {
+        if (currentTime <= 1) {
+          window.clearInterval(countdownTimer);
+          setNotice("");
+          setRevealed(true);
+          setPhase("timeout");
+          recordRound(false);
+          return 0;
+        }
+
+        return currentTime - 1;
+      });
+    }, 1000);
+
+    return () => window.clearInterval(countdownTimer);
+  }, [phase]);
 
   const pool = useMemo(() => getPool(list, difficulty), [difficulty, list]);
 
@@ -113,9 +139,10 @@ export function usePokemonGame(list: Pokemon[]) {
     if (phase === "correct") return "CORRECT! 身份确认";
     if (phase === "wrong") return `WRONG! 答案是 ${current.zh}`;
     if (phase === "skipped") return `SKIPPED! 答案是 ${current.zh}`;
+    if (phase === "timeout") return `TIME UP! 答案是 ${current.zh}`;
     if (notice) return notice;
-    return "READY... 输入答案";
-  }, [current.zh, notice, phase]);
+    return `READY... ${timeLeft}s`;
+  }, [current.zh, notice, phase, timeLeft]);
 
   const feedback = useMemo(() => {
     if (phase === "ready") return "PRESS START";
@@ -125,6 +152,7 @@ export function usePokemonGame(list: Pokemon[]) {
     if (phase === "correct") return `${current.zh} / ${current.en}`;
     if (phase === "wrong") return "差一点，再来一题";
     if (phase === "skipped") return "已跳过";
+    if (phase === "timeout") return "时间到";
     if (notice) return notice;
     return "我是谁？";
   }, [current, hit, notice, phase]);
@@ -143,6 +171,8 @@ export function usePokemonGame(list: Pokemon[]) {
 
   function enterRound() {
     clearPhaseTimer();
+    roundSettled.current = false;
+    setTimeLeft(ROUND_SECONDS);
     setPhase("entering");
     phaseTimer.current = window.setTimeout(() => {
       setPhase("playing");
@@ -151,6 +181,9 @@ export function usePokemonGame(list: Pokemon[]) {
   }
 
   function recordRound(isHit: boolean) {
+    if (roundSettled.current) return;
+
+    roundSettled.current = true;
     const nextTotal = total + 1;
     const nextHit = hit + (isHit ? 1 : 0);
     setTotal(nextTotal);
@@ -162,12 +195,13 @@ export function usePokemonGame(list: Pokemon[]) {
     }
   }
 
-  function submit() {
+  function submitAnswer(rawAnswer = answer) {
     if (phase !== "playing") return;
 
-    const normalized = normalizeAnswer(answer);
+    const normalized = normalizeAnswer(rawAnswer);
     if (!normalized) return;
 
+    setAnswer(rawAnswer);
     const isCorrect = acceptedAnswers.includes(normalized);
     if (difficulty !== "hard" && !isCorrect && isCloseAnswer(normalized, acceptedAnswers)) {
       setNotice("CLOSE! 很接近，再完整一点");
@@ -177,6 +211,10 @@ export function usePokemonGame(list: Pokemon[]) {
     setRevealed(true);
     setPhase(isCorrect ? "correct" : "wrong");
     recordRound(isCorrect);
+  }
+
+  function submit() {
+    submitAnswer();
   }
 
   function skip() {
@@ -237,7 +275,8 @@ export function usePokemonGame(list: Pokemon[]) {
       phase === "playing" ||
       phase === "correct" ||
       phase === "wrong" ||
-      phase === "skipped",
+      phase === "skipped" ||
+      phase === "timeout",
     canSkip: phase === "playing",
     current,
     difficulty,
@@ -253,6 +292,9 @@ export function usePokemonGame(list: Pokemon[]) {
     start,
     status,
     submit,
+    submitAnswer,
+    timeLeft,
     total,
+    roundSeconds: ROUND_SECONDS,
   };
 }
