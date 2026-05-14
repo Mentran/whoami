@@ -1,4 +1,4 @@
-import type { FormEvent } from "react";
+import { useEffect, useRef, type FormEvent } from "react";
 
 type AnswerBoxProps = {
   disabled: boolean;
@@ -17,6 +17,15 @@ export function AnswerBox({
   onNext,
   revealed,
 }: AnswerBoxProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const buttonLabel = revealed ? "NEXT" : disabled ? "WAIT" : "GUESS";
+
+  useEffect(() => {
+    if (!disabled) {
+      inputRef.current?.focus();
+    }
+  }, [disabled]);
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (revealed) {
@@ -29,15 +38,17 @@ export function AnswerBox({
   return (
     <form className="answer-box" onSubmit={handleSubmit}>
       <input
+        ref={inputRef}
         aria-label="输入宝可梦名字"
         autoComplete="off"
         disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
-        placeholder={revealed ? "按 Enter 进入下一题" : "输入中文名或英文名"}
+        placeholder={disabled && !revealed ? "等待信号..." : revealed ? "按 Enter 进入下一题" : "输入中文名或英文名"}
         value={value}
       />
-      <button type="submit">{revealed ? "NEXT" : "GUESS"}</button>
+      <button disabled={disabled && !revealed} type="submit">
+        {buttonLabel}
+      </button>
     </form>
   );
 }
-

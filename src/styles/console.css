@@ -1,4 +1,5 @@
 .console {
+  position: relative;
   width: min(92vw, 760px);
   min-height: min(94vh, 940px);
   display: grid;
@@ -8,10 +9,14 @@
   border: 1px solid rgba(255, 164, 122, 0.5);
   border-radius: 26px;
   background:
+    radial-gradient(circle at 22% 12%, rgba(255, 240, 210, 0.22), transparent 18%),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.16), transparent 26%, rgba(80, 0, 0, 0.2) 78%),
     linear-gradient(115deg, rgba(255, 255, 255, 0.17), transparent 24%),
     repeating-linear-gradient(75deg, rgba(255, 255, 255, 0.04) 0 3px, transparent 3px 12px),
+    repeating-linear-gradient(18deg, rgba(80, 0, 0, 0.08) 0 1px, transparent 1px 9px),
     #d72516;
   box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
     inset 0 0 34px rgba(95, 0, 0, 0.55),
     0 32px 90px rgba(0, 0, 0, 0.55);
 }
@@ -21,6 +26,35 @@
   align-items: center;
   gap: 18px;
   min-height: 74px;
+}
+
+.sound-control {
+  margin-left: auto;
+}
+
+.sound-button {
+  width: 46px;
+  height: 46px;
+  border: 3px solid rgba(255, 255, 255, 0.45);
+  border-radius: 50%;
+  color: #fff7ea;
+  background: rgba(35, 31, 29, 0.5);
+  font-size: 18px;
+  font-weight: 900;
+  box-shadow:
+    inset 0 -4px 0 rgba(0, 0, 0, 0.22),
+    0 5px 12px rgba(0, 0, 0, 0.18);
+}
+
+.sound-button:hover {
+  filter: brightness(1.08);
+}
+
+.sound-button:active {
+  transform: translateY(2px);
+  box-shadow:
+    inset 0 -1px 0 rgba(0, 0, 0, 0.28),
+    0 2px 6px rgba(0, 0, 0, 0.16);
 }
 
 .camera {
@@ -62,6 +96,17 @@
   box-shadow: inset 0 0 22px rgba(68, 84, 77, 0.28);
 }
 
+.screen-bezel::after {
+  content: "";
+  position: absolute;
+  inset: 14px;
+  pointer-events: none;
+  border-radius: 8px;
+  background: linear-gradient(122deg, rgba(255, 255, 255, 0.24), transparent 32%);
+  mix-blend-mode: screen;
+  opacity: 0.42;
+}
+
 .speaker-dots {
   position: absolute;
   top: 28px;
@@ -80,6 +125,7 @@
 
 .game-screen {
   position: relative;
+  isolation: isolate;
   display: grid;
   grid-template-columns: minmax(180px, 0.9fr) minmax(220px, 1fr);
   gap: clamp(18px, 4vw, 36px);
@@ -88,10 +134,19 @@
   overflow: hidden;
   border: 8px solid #384253;
   background:
-    linear-gradient(rgba(255, 255, 255, 0.05) 50%, rgba(0, 0, 0, 0.08) 50%) 0 0 / 100% 5px,
+    repeating-radial-gradient(circle at 18% 22%, rgba(255, 255, 255, 0.07) 0 1px, transparent 1px 5px),
+    linear-gradient(rgba(255, 255, 255, 0.055) 50%, rgba(0, 0, 0, 0.11) 50%) 0 0 / 100% 5px,
+    linear-gradient(90deg, rgba(255, 0, 0, 0.04), rgba(0, 255, 80, 0.035), rgba(0, 70, 255, 0.045)),
     radial-gradient(circle at 20% 20%, rgba(91, 171, 255, 0.42), transparent 38%),
     #1547a8;
-  box-shadow: inset 0 0 26px rgba(0, 0, 0, 0.45);
+  box-shadow:
+    inset 0 0 18px rgba(255, 255, 255, 0.12),
+    inset 0 0 42px rgba(0, 0, 0, 0.58);
+}
+
+.phase-ready {
+  grid-template-columns: 1fr;
+  place-items: center;
 }
 
 .game-screen::after {
@@ -99,8 +154,62 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-  opacity: 0.28;
+  background:
+    linear-gradient(118deg, rgba(255, 255, 255, 0.18), transparent 24%, transparent 62%, rgba(255, 255, 255, 0.08)),
+    repeating-linear-gradient(0deg, transparent 0 7px, rgba(0, 0, 0, 0.13) 7px 8px),
+    radial-gradient(circle at 50% 50%, transparent 54%, rgba(0, 0, 0, 0.38));
+  opacity: 0.42;
+  z-index: 4;
+}
+
+.start-screen {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 26px;
+  justify-items: center;
+  width: min(100%, 520px);
+  min-height: 280px;
+  padding: 24px;
+  border: 0;
+  color: #fff7ea;
+  background: transparent;
+  text-align: center;
+}
+
+.start-title {
+  font-size: clamp(42px, 8vw, 78px);
+  font-weight: 950;
+  line-height: 0.95;
+  text-shadow:
+    5px 5px 0 rgba(0, 0, 0, 0.42),
+    0 0 18px rgba(255, 255, 255, 0.22);
+}
+
+.start-action {
+  padding: 10px 18px;
+  border: 4px solid #fff7ea;
+  color: #f8ff9c;
+  font-size: clamp(18px, 3vw, 28px);
+  font-weight: 950;
+  animation: blink 1s steps(2, end) infinite;
+}
+
+.phase-entering .silhouette-card,
+.phase-entering .prompt-panel {
+  animation: scanIn 0.62s steps(8, end);
+}
+
+.phase-transitioning::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  background:
+    linear-gradient(#fff, #fff) 50% 50% / 100% 8px no-repeat,
+    rgba(12, 24, 45, 0.84);
+  animation: channelSwitch 0.42s ease-in forwards;
 }
 
 .phase-wrong {
@@ -123,9 +232,12 @@
   min-height: 292px;
   border: 4px solid #fff7fa;
   background:
+    radial-gradient(circle at 45% 40%, rgba(255, 255, 255, 0.16), transparent 36%),
     linear-gradient(rgba(255, 255, 255, 0.08) 50%, rgba(0, 0, 0, 0.08) 50%) 0 0 / 100% 6px,
     linear-gradient(145deg, #58c334, #138f29);
-  box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.15);
+  box-shadow:
+    0 0 0 5px rgba(255, 255, 255, 0.15),
+    inset 0 0 28px rgba(0, 0, 0, 0.2);
 }
 
 .pokemon-art {
@@ -148,6 +260,7 @@
 .pokemon-art.revealed {
   filter: none;
   transform: scale(1.08);
+  animation: revealPop 0.48s cubic-bezier(0.2, 1.4, 0.36, 1);
 }
 
 .prompt-panel {
@@ -216,7 +329,19 @@
   padding: 0 16px;
   color: #1d2433;
   background: #fffef3;
-  box-shadow: inset 0 0 0 2px rgba(31, 40, 58, 0.1);
+  outline: 0;
+  box-shadow:
+    inset 0 0 0 2px rgba(31, 40, 58, 0.1),
+    0 0 0 0 rgba(255, 216, 79, 0);
+  transition:
+    box-shadow 0.14s ease,
+    transform 0.14s ease;
+}
+
+.answer-box input:focus-visible {
+  box-shadow:
+    inset 0 0 0 2px rgba(31, 40, 58, 0.18),
+    0 0 0 4px rgba(255, 216, 79, 0.42);
 }
 
 .answer-box input:disabled {
@@ -228,7 +353,38 @@
   color: #112241;
   font-weight: 900;
   background: #ffd84f;
-  box-shadow: inset 0 -4px 0 rgba(99, 75, 0, 0.25);
+  box-shadow:
+    inset 0 -4px 0 rgba(99, 75, 0, 0.25),
+    0 5px 12px rgba(0, 0, 0, 0.14);
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease,
+    opacity 0.12s ease;
+}
+
+.answer-box button:not(:disabled):hover,
+.round-button:not(:disabled):hover {
+  filter: brightness(1.07);
+}
+
+.answer-box button:not(:disabled):active {
+  transform: translateY(3px);
+  box-shadow:
+    inset 0 -1px 0 rgba(99, 75, 0, 0.28),
+    0 2px 6px rgba(0, 0, 0, 0.16);
+}
+
+.answer-box button:focus-visible,
+.round-button:focus-visible,
+.start-screen:focus-visible,
+.sound-button:focus-visible {
+  outline: 4px solid rgba(255, 216, 79, 0.76);
+  outline-offset: 4px;
+}
+
+.answer-box button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
 }
 
 .console-controls {
@@ -248,7 +404,9 @@
 .dpad span {
   position: absolute;
   background: #24211f;
-  box-shadow: inset 0 6px 8px rgba(255, 255, 255, 0.08);
+  box-shadow:
+    inset 0 6px 8px rgba(255, 255, 255, 0.08),
+    0 8px 14px rgba(0, 0, 0, 0.18);
 }
 
 .dpad .up,
@@ -323,6 +481,10 @@
   box-shadow:
     inset 0 -8px 0 rgba(0, 0, 0, 0.35),
     0 8px 18px rgba(0, 0, 0, 0.22);
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease,
+    opacity 0.12s ease;
 }
 
 .round-button.primary {
@@ -330,11 +492,27 @@
   background: #8d2b1f;
 }
 
-.round-button:active {
+.round-button:not(:disabled):active {
   transform: translateY(2px);
+  box-shadow:
+    inset 0 -3px 0 rgba(0, 0, 0, 0.36),
+    0 3px 8px rgba(0, 0, 0, 0.22);
 }
 
-.round-button.primary:active {
+.round-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.round-button:disabled:active {
+  transform: none;
+}
+
+.round-button.primary:disabled {
+  transform: translateY(-34px);
+}
+
+.round-button.primary:not(:disabled):active {
   transform: translateY(-30px);
 }
 
@@ -349,6 +527,10 @@
   background: #231f1d;
   font-weight: 900;
   letter-spacing: 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.35);
 }
 
 @keyframes breathe {
@@ -358,6 +540,29 @@
   }
   50% {
     transform: scale(1.08);
+  }
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0.28;
+  }
+}
+
+@keyframes scanIn {
+  0% {
+    opacity: 0;
+    transform: translateY(14px) scaleY(0.04);
+    filter: brightness(2.4) saturate(0);
+  }
+  34% {
+    opacity: 1;
+    transform: translateY(-4px) scaleY(1.08);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scaleY(1);
+    filter: none;
   }
 }
 
@@ -383,15 +588,55 @@
   }
 }
 
+@keyframes revealPop {
+  0% {
+    opacity: 0.35;
+    transform: scale(0.82) rotate(-2deg);
+  }
+  62% {
+    opacity: 1;
+    transform: scale(1.14) rotate(1deg);
+  }
+  100% {
+    transform: scale(1.08) rotate(0);
+  }
+}
+
+@keyframes channelSwitch {
+  0% {
+    opacity: 0;
+    background-size: 100% 4px, auto;
+  }
+  40% {
+    opacity: 1;
+    background-size: 100% 18px, auto;
+  }
+  100% {
+    opacity: 0;
+    background-size: 100% 110%, auto;
+  }
+}
+
 @media (max-width: 720px) {
+  body {
+    overflow-x: hidden;
+  }
+
   .console {
+    width: min(100%, 520px);
     gap: 16px;
     min-height: auto;
+    padding: 16px;
     border-radius: 18px;
   }
 
   .console-top {
     min-height: 54px;
+  }
+
+  .sound-button {
+    width: 42px;
+    height: 42px;
   }
 
   .camera {
@@ -401,16 +646,37 @@
   }
 
   .screen-bezel {
-    padding: 44px 14px 18px;
+    gap: 12px;
+    padding: 42px 12px 16px;
   }
 
   .game-screen {
     grid-template-columns: 1fr;
+    gap: 16px;
     min-height: 0;
+    padding: 14px;
+    border-width: 6px;
   }
 
   .silhouette-card {
-    min-height: 240px;
+    min-height: clamp(190px, 52vw, 260px);
+  }
+
+  .pokemon-art {
+    width: min(78%, 220px);
+  }
+
+  .prompt-panel {
+    gap: 12px;
+  }
+
+  .question {
+    font-size: clamp(34px, 12vw, 54px);
+  }
+
+  .feedback {
+    max-width: 100%;
+    overflow-wrap: anywhere;
   }
 
   .brand {
@@ -420,6 +686,12 @@
 
   .answer-box {
     grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .answer-box input,
+  .answer-box button {
+    min-height: 52px;
   }
 
   .console-controls {
@@ -433,19 +705,85 @@
 
   .button-cluster {
     order: 2;
+    gap: 22px;
+  }
+
+  .round-button {
+    width: 68px;
+    height: 68px;
   }
 
   .round-button.primary {
     transform: none;
   }
 
-  .round-button.primary:active {
+  .round-button.primary:disabled {
+    transform: none;
+  }
+
+  .round-button.primary:not(:disabled):active {
     transform: translateY(2px);
   }
 
   .status-bar {
+    min-height: 50px;
     padding: 0 16px;
     font-size: 14px;
   }
 }
 
+@media (max-width: 420px) {
+  .app-shell {
+    padding: 8px;
+  }
+
+  .console {
+    padding: 12px;
+  }
+
+  .console-top {
+    gap: 12px;
+  }
+
+  .led {
+    width: 16px;
+    height: 16px;
+  }
+
+  .screen-bezel {
+    padding: 38px 10px 14px;
+  }
+
+  .speaker-dots {
+    top: 22px;
+  }
+
+  .game-screen {
+    padding: 10px;
+  }
+
+  .start-screen {
+    min-height: 220px;
+    padding: 14px;
+  }
+
+  .start-action {
+    max-width: 100%;
+    font-size: 18px;
+  }
+
+  .score-display {
+    gap: 6px;
+    min-height: 66px;
+    padding: 8px;
+  }
+
+  .score-display strong {
+    font-size: 18px;
+  }
+
+  .round-button {
+    width: 62px;
+    height: 62px;
+  }
+}
