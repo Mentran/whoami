@@ -52,6 +52,9 @@ export const pokemonList: Pokemon[] = [
     "zh": "喷火龙",
     "en": "charizard",
     "aliases": [
+      "老喷",
+      "喷火",
+      "火龙",
       "噴火龍"
     ]
   },
@@ -78,6 +81,7 @@ export const pokemonList: Pokemon[] = [
     "zh": "水箭龟",
     "en": "blastoise",
     "aliases": [
+      "水龟",
       "水箭龜"
     ]
   },
@@ -102,7 +106,9 @@ export const pokemonList: Pokemon[] = [
     "id": 12,
     "zh": "巴大蝶",
     "en": "butterfree",
-    "aliases": []
+    "aliases": [
+      "蝴蝶"
+    ]
   },
   {
     "id": 13,
@@ -276,13 +282,17 @@ export const pokemonList: Pokemon[] = [
     "id": 37,
     "zh": "六尾",
     "en": "vulpix",
-    "aliases": []
+    "aliases": [
+      "小狐狸"
+    ]
   },
   {
     "id": 38,
     "zh": "九尾",
     "en": "ninetales",
-    "aliases": []
+    "aliases": [
+      "狐狸"
+    ]
   },
   {
     "id": 39,
@@ -303,13 +313,17 @@ export const pokemonList: Pokemon[] = [
     "id": 41,
     "zh": "超音蝠",
     "en": "zubat",
-    "aliases": []
+    "aliases": [
+      "蝙蝠"
+    ]
   },
   {
     "id": 42,
     "zh": "大嘴蝠",
     "en": "golbat",
-    "aliases": []
+    "aliases": [
+      "大蝙蝠"
+    ]
   },
   {
     "id": 43,
@@ -947,6 +961,7 @@ export const pokemonList: Pokemon[] = [
     "zh": "暴鲤龙",
     "en": "gyarados",
     "aliases": [
+      "暴鲤",
       "暴鯉龍"
     ]
   },
@@ -954,13 +969,16 @@ export const pokemonList: Pokemon[] = [
     "id": 131,
     "zh": "拉普拉斯",
     "en": "lapras",
-    "aliases": []
+    "aliases": [
+      "乘龙"
+    ]
   },
   {
     "id": 132,
     "zh": "百变怪",
     "en": "ditto",
     "aliases": [
+      "变身怪",
       "百變怪"
     ]
   },
@@ -976,19 +994,28 @@ export const pokemonList: Pokemon[] = [
     "id": 134,
     "zh": "水伊布",
     "en": "vaporeon",
-    "aliases": []
+    "aliases": [
+      "水精灵",
+      "水布"
+    ]
   },
   {
     "id": 135,
     "zh": "雷伊布",
     "en": "jolteon",
-    "aliases": []
+    "aliases": [
+      "雷精灵",
+      "雷布"
+    ]
   },
   {
     "id": 136,
     "zh": "火伊布",
     "en": "flareon",
-    "aliases": []
+    "aliases": [
+      "火精灵",
+      "火布"
+    ]
   },
   {
     "id": 137,
@@ -1051,6 +1078,8 @@ export const pokemonList: Pokemon[] = [
     "zh": "急冻鸟",
     "en": "articuno",
     "aliases": [
+      "冰冻鸟",
+      "冰鸟",
       "急凍鳥"
     ]
   },
@@ -1059,6 +1088,7 @@ export const pokemonList: Pokemon[] = [
     "zh": "闪电鸟",
     "en": "zapdos",
     "aliases": [
+      "雷鸟",
       "閃電鳥"
     ]
   },
@@ -1067,6 +1097,7 @@ export const pokemonList: Pokemon[] = [
     "zh": "火焰鸟",
     "en": "moltres",
     "aliases": [
+      "火鸟",
       "火焰鳥"
     ]
   },
@@ -1075,6 +1106,7 @@ export const pokemonList: Pokemon[] = [
     "zh": "迷你龙",
     "en": "dratini",
     "aliases": [
+      "迷你",
       "迷你龍"
     ]
   },
@@ -1091,6 +1123,7 @@ export const pokemonList: Pokemon[] = [
     "zh": "快龙",
     "en": "dragonite",
     "aliases": [
+      "快肥",
       "快龍"
     ]
   },

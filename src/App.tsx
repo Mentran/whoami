@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnswerBox } from "./components/AnswerBox";
 import { ConsoleFrame } from "./components/ConsoleFrame";
 import { GameScreen } from "./components/GameScreen";
@@ -6,11 +6,13 @@ import { ScoreDisplay } from "./components/ScoreDisplay";
 import { pokemonList } from "./data/pokemon";
 import { useSfx } from "./hooks/useSfx";
 import { usePokemonGame } from "./hooks/usePokemonGame";
+import { createResultText } from "./utils/result";
 
 export default function App() {
   const game = usePokemonGame(pokemonList);
   const sfx = useSfx();
   const previousPhase = useRef(game.phase);
+  const [shareStatus, setShareStatus] = useState("");
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -41,6 +43,34 @@ export default function App() {
 
     previousPhase.current = game.phase;
   }, [game.phase, sfx]);
+
+  useEffect(() => {
+    if (game.phase !== "finished" && shareStatus) {
+      setShareStatus("");
+    }
+  }, [game.phase, shareStatus]);
+
+  async function shareResult() {
+    const text = createResultText(game.hit, game.roundLimit, game.difficulty);
+    const shareData = {
+      text,
+      title: "我是谁？",
+      url: window.location.href,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+        setShareStatus("SHARED!");
+        return;
+      }
+
+      await navigator.clipboard.writeText(`${text} ${window.location.href}`);
+      setShareStatus("COPIED!");
+    } catch {
+      setShareStatus("COPY FAILED");
+    }
+  }
 
   return (
     <main className="app-shell">
@@ -88,7 +118,9 @@ export default function App() {
           hit={game.hit}
           phase={game.phase}
           onStart={game.start}
+          onShareResult={shareResult}
           roundLimit={game.roundLimit}
+          shareStatus={shareStatus}
           setDifficulty={game.setDifficulty}
           total={game.total}
         />

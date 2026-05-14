@@ -1,5 +1,6 @@
 import { artworkUrl, type Pokemon } from "../data/pokemon";
 import type { Difficulty, Phase } from "../hooks/usePokemonGame";
+import { difficultyLabels, getRating, getRatingText } from "../utils/result";
 
 type GameScreenProps = {
   difficulty: Difficulty;
@@ -9,24 +10,12 @@ type GameScreenProps = {
   hit: number;
   phase: Phase;
   onStart: () => void;
+  onShareResult: () => void;
   roundLimit: number;
+  shareStatus: string;
   setDifficulty: (difficulty: Difficulty) => void;
   total: number;
 };
-
-const difficultyLabels: Record<Difficulty, string> = {
-  easy: "EASY",
-  normal: "NORMAL",
-  hard: "HARD",
-};
-
-function getRating(hit: number, roundLimit: number) {
-  const ratio = hit / roundLimit;
-  if (ratio >= 0.9) return "MASTER";
-  if (ratio >= 0.7) return "ACE";
-  if (ratio >= 0.4) return "TRAINER";
-  return "ROOKIE";
-}
 
 export function GameScreen({
   difficulty,
@@ -36,7 +25,9 @@ export function GameScreen({
   hit,
   phase,
   onStart,
+  onShareResult,
   roundLimit,
+  shareStatus,
   setDifficulty,
   total,
 }: GameScreenProps) {
@@ -73,9 +64,16 @@ export function GameScreen({
             {hit}/{roundLimit}
           </strong>
           <span className="result-rating">{getRating(hit, roundLimit)}</span>
-          <button className="start-action" onClick={onStart} type="button">
-            PLAY AGAIN
-          </button>
+          <span className="result-copy">{getRatingText(hit, roundLimit)}</span>
+          <div className="result-actions">
+            <button className="share-action" onClick={onShareResult} type="button">
+              SHARE
+            </button>
+            <button className="start-action" onClick={onStart} type="button">
+              PLAY AGAIN
+            </button>
+          </div>
+          {shareStatus && <span className="share-status">{shareStatus}</span>}
         </div>
       )}
 
