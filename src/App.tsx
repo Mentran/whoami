@@ -81,11 +81,16 @@ export default function App() {
         status={game.status}
       >
         <GameScreen
+          difficulty={game.difficulty}
           pokemon={game.current}
           revealed={game.revealed}
           feedback={game.feedback}
+          hit={game.hit}
           phase={game.phase}
           onStart={game.start}
+          roundLimit={game.roundLimit}
+          setDifficulty={game.setDifficulty}
+          total={game.total}
         />
         <AnswerBox
           disabled={!game.canAnswer}

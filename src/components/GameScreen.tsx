@@ -1,27 +1,85 @@
 import { artworkUrl, type Pokemon } from "../data/pokemon";
-import type { Phase } from "../hooks/usePokemonGame";
+import type { Difficulty, Phase } from "../hooks/usePokemonGame";
 
 type GameScreenProps = {
+  difficulty: Difficulty;
   pokemon: Pokemon;
   revealed: boolean;
   feedback: string;
+  hit: number;
   phase: Phase;
   onStart: () => void;
+  roundLimit: number;
+  setDifficulty: (difficulty: Difficulty) => void;
+  total: number;
 };
 
-export function GameScreen({ pokemon, revealed, feedback, phase, onStart }: GameScreenProps) {
+const difficultyLabels: Record<Difficulty, string> = {
+  easy: "EASY",
+  normal: "NORMAL",
+  hard: "HARD",
+};
+
+function getRating(hit: number, roundLimit: number) {
+  const ratio = hit / roundLimit;
+  if (ratio >= 0.9) return "MASTER";
+  if (ratio >= 0.7) return "ACE";
+  if (ratio >= 0.4) return "TRAINER";
+  return "ROOKIE";
+}
+
+export function GameScreen({
+  difficulty,
+  pokemon,
+  revealed,
+  feedback,
+  hit,
+  phase,
+  onStart,
+  roundLimit,
+  setDifficulty,
+  total,
+}: GameScreenProps) {
   const isReady = phase === "ready";
+  const isFinished = phase === "finished";
 
   return (
     <div className={`game-screen phase-${phase}`}>
       {isReady && (
-        <button className="start-screen" onClick={onStart} type="button">
+        <div className="start-screen">
           <span className="start-title">WHO'S THAT?</span>
-          <span className="start-action">PRESS START</span>
-        </button>
+          <div className="difficulty-picker" aria-label="选择难度">
+            {(["easy", "normal", "hard"] as Difficulty[]).map((mode) => (
+              <button
+                className={mode === difficulty ? "active" : ""}
+                key={mode}
+                onClick={() => setDifficulty(mode)}
+                type="button"
+              >
+                {difficultyLabels[mode]}
+              </button>
+            ))}
+          </div>
+          <button className="start-action" onClick={onStart} type="button">
+            PRESS START
+          </button>
+        </div>
       )}
 
-      {!isReady && (
+      {isFinished && (
+        <div className="result-screen">
+          <span className="result-title">GAME SET</span>
+          <strong>
+            {hit}/{roundLimit}
+          </strong>
+          <span className="result-rating">{getRating(hit, roundLimit)}</span>
+          <button className="start-action" onClick={onStart} type="button">
+            PLAY AGAIN
+          </button>
+        </div>
+      )}
+
+      {!isReady && !isFinished && (
         <>
           <div className="silhouette-card">
             <img
@@ -33,6 +91,9 @@ export function GameScreen({ pokemon, revealed, feedback, phase, onStart }: Game
           </div>
 
           <div className="prompt-panel">
+            <p className="round-count">
+              ROUND {Math.min(total + 1, roundLimit)}/{roundLimit}
+            </p>
             <p className="question">{revealed ? "就是它！" : "我是谁？"}</p>
             <div className="power-meter" aria-hidden="true">
               <span />
