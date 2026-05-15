@@ -7,7 +7,6 @@ export type Phase =
   | "entering"
   | "playing"
   | "correct"
-  | "wrong"
   | "skipped"
   | "timeout"
   | "transitioning"
@@ -140,10 +139,9 @@ export function usePokemonGame(list: Pokemon[]) {
     if (phase === "finished") return "GAME SET... PRESS START";
     if (phase === "entering") return "SCANNING... 黑影载入";
     if (phase === "transitioning") return "TUNING... 下一题";
-    if (phase === "correct") return "CORRECT! 身份确认";
-    if (phase === "wrong") return `WRONG! 答案是 ${current.zh}`;
+    if (phase === "correct") return "CORRECT! 可说：下一题 / 介绍一下";
     if (phase === "skipped") return `SKIPPED! 答案是 ${current.zh}`;
-    if (phase === "timeout") return `TIME UP! 答案是 ${current.zh}`;
+    if (phase === "timeout") return `TIME UP! 答案是 ${current.zh}；可说：下一题 / 介绍一下`;
     if (notice) return notice;
     if (dexVisible) return "POKEDEX... 资料显示中";
     return `READY... ${timeLeft}s`;
@@ -155,7 +153,6 @@ export function usePokemonGame(list: Pokemon[]) {
     if (phase === "entering") return "信号接入中";
     if (phase === "transitioning") return "频道切换中";
     if (phase === "correct") return `${current.zh} / ${current.en}`;
-    if (phase === "wrong") return "差一点，再来一题";
     if (phase === "skipped") return "已跳过";
     if (phase === "timeout") return "时间到";
     if (dexVisible) return `${pokedexEntry.category} / ${pokedexEntry.types.join("·")}`;
@@ -205,23 +202,34 @@ export function usePokemonGame(list: Pokemon[]) {
     }
   }
 
-  function submitAnswer(rawAnswer = answer) {
-    if (phase !== "playing") return;
+  function tryAnswer(rawAnswer: string) {
+    if (phase !== "playing") return "ignored";
 
     const normalized = normalizeAnswer(rawAnswer);
-    if (!normalized) return;
+    if (!normalized) return "empty";
 
     setAnswer(rawAnswer);
     setDexVisible(false);
+    setNotice("");
     const isCorrect = acceptedAnswers.includes(normalized);
     if (difficulty !== "hard" && !isCorrect && isCloseAnswer(normalized, acceptedAnswers)) {
       setNotice("CLOSE! 很接近，再完整一点");
-      return;
+      return "close";
+    }
+
+    if (!isCorrect) {
+      setNotice("NOT IT! 继续猜");
+      return "wrong";
     }
 
     setRevealed(true);
-    setPhase(isCorrect ? "correct" : "wrong");
-    recordRound(isCorrect);
+    setPhase("correct");
+    recordRound(true);
+    return "correct";
+  }
+
+  function submitAnswer(rawAnswer = answer) {
+    tryAnswer(rawAnswer);
   }
 
   function submit() {
@@ -288,7 +296,6 @@ export function usePokemonGame(list: Pokemon[]) {
       phase === "finished" ||
       phase === "playing" ||
       phase === "correct" ||
-      phase === "wrong" ||
       phase === "skipped" ||
       phase === "timeout",
     canSkip: phase === "playing",
@@ -312,6 +319,7 @@ export function usePokemonGame(list: Pokemon[]) {
     submitAnswer,
     timeLeft,
     total,
+    tryAnswer,
     roundSeconds: ROUND_SECONDS,
   };
 }

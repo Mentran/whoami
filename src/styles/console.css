@@ -304,10 +304,6 @@
   animation: channelSwitch 0.42s ease-in forwards;
 }
 
-.phase-wrong {
-  animation: shake 0.22s linear 2;
-}
-
 .phase-timeout {
   animation: dangerPulse 0.18s linear 3;
 }

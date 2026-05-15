@@ -10,6 +10,10 @@ import { useSpeechInput } from "./hooks/useSpeechInput";
 import { createResultText } from "./utils/result";
 import { extractVoiceAnswer, parseVoiceCommand } from "./utils/voiceCommands";
 
+function isRoundRevealed(phase: string) {
+  return phase === "correct" || phase === "timeout" || phase === "skipped";
+}
+
 export default function App() {
   const game = usePokemonGame(pokemonList);
   const sfx = useSfx();
@@ -21,20 +25,6 @@ export default function App() {
     setLastHeard(text);
 
     const command = parseVoiceCommand(text);
-    if (command === "next" || command === "skip") {
-      game.next();
-      return;
-    }
-
-    if (command === "restart") {
-      game.start();
-      return;
-    }
-
-    if (command === "intro") {
-      game.showDex();
-      return;
-    }
 
     if (command === "mute") {
       sfx.setMuted(true);
@@ -46,7 +36,53 @@ export default function App() {
       return;
     }
 
-    game.submitAnswer(extractVoiceAnswer(text));
+    if (command === "restart") {
+      game.start();
+      return;
+    }
+
+    if (game.phase === "playing") {
+      if (command === "next" || command === "skip") {
+        game.skip();
+        return;
+      }
+
+      if (command === "intro") {
+        return;
+      }
+
+      const result = game.tryAnswer(extractVoiceAnswer(text));
+      if (result === "wrong" || result === "close") {
+        sfx.play("wrong");
+      }
+      return;
+    }
+
+    if (isRoundRevealed(game.phase)) {
+      if (command === "next" || command === "skip") {
+        game.next();
+        return;
+      }
+
+      if (command === "intro") {
+        game.showDex();
+        return;
+      }
+
+      return;
+    }
+
+    if (game.phase === "ready" || game.phase === "finished") {
+      if (command === "next") {
+        game.start();
+      }
+      return;
+    }
+
+    if (command === "next" || command === "skip") {
+      game.next();
+      return;
+    }
   }
 
   const speech = useSpeechInput(handleVoiceResult);
@@ -75,7 +111,6 @@ export default function App() {
     if (game.phase === "entering" && previousPhase.current === "ready") sfx.play("start");
     if (game.phase === "transitioning") sfx.play("next");
     if (game.phase === "correct") sfx.play("correct");
-    if (game.phase === "wrong") sfx.play("wrong");
     if (game.phase === "skipped") sfx.play("skip");
     if (game.phase === "timeout") sfx.play("timeout");
 
@@ -83,12 +118,18 @@ export default function App() {
   }, [game.phase, sfx]);
 
   useEffect(() => {
-    if (game.phase === "playing" && speech.canAutoRestart && !speech.listening) {
+    const shouldListen =
+      game.phase === "playing" ||
+      game.phase === "correct" ||
+      game.phase === "timeout" ||
+      game.phase === "skipped";
+
+    if (shouldListen && speech.canAutoRestart && !speech.listening) {
       speech.start();
       return;
     }
 
-    if (game.phase !== "playing" && speech.listening) {
+    if (!shouldListen && speech.listening) {
       speech.stop();
     }
   }, [game.phase, speech]);
