@@ -9,7 +9,7 @@ function getPreferredVoice() {
   );
 }
 
-export function useTts() {
+export function useTts(onDone?: () => void) {
   const [error, setError] = useState("");
   const [speaking, setSpeaking] = useState(false);
   const supported = typeof window !== "undefined" && "speechSynthesis" in window;
@@ -25,7 +25,8 @@ export function useTts() {
 
     window.speechSynthesis.cancel();
     setSpeaking(false);
-  }, [supported]);
+    onDone?.();
+  }, [onDone, supported]);
 
   const speak = useCallback(
     (text: string) => {
@@ -47,15 +48,19 @@ export function useTts() {
         setError("");
         setSpeaking(true);
       };
-      utterance.onend = () => setSpeaking(false);
+      utterance.onend = () => {
+        setSpeaking(false);
+        onDone?.();
+      };
       utterance.onerror = () => {
         setError("百科朗读失败");
         setSpeaking(false);
+        onDone?.();
       };
 
       window.speechSynthesis.speak(utterance);
     },
-    [supported],
+    [onDone, supported],
   );
 
   return useMemo(
@@ -69,4 +74,3 @@ export function useTts() {
     [error, speak, speaking, stop, supported],
   );
 }
-

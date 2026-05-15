@@ -18,7 +18,8 @@ function isRoundRevealed(phase: string) {
 export default function App() {
   const game = usePokemonGame(pokemonList);
   const sfx = useSfx();
-  const tts = useTts();
+  const [speechPaused, setSpeechPaused] = useState(false);
+  const tts = useTts(() => setSpeechPaused(false));
   const previousPhase = useRef(game.phase);
   const spokenDexId = useRef<number | null>(null);
   const spokenFailureKey = useRef("");
@@ -41,6 +42,7 @@ export default function App() {
     }
 
     if (command === "restart") {
+      tts.stop();
       game.start();
       return;
     }
@@ -64,6 +66,7 @@ export default function App() {
 
     if (isRoundRevealed(game.phase)) {
       if (command === "next" || command === "skip") {
+        tts.stop();
         game.next();
         return;
       }
@@ -85,6 +88,7 @@ export default function App() {
     }
 
     if (command === "next" || command === "skip") {
+      tts.stop();
       game.next();
       return;
     }
@@ -132,12 +136,14 @@ export default function App() {
     if (spokenFailureKey.current === failureKey) return;
 
     spokenFailureKey.current = failureKey;
+    setSpeechPaused(true);
     speech.stop();
     tts.speak(`正确答案是，${game.current.zh}。你可以说，下一题，或者，介绍一下。`);
   }, [game.current, game.phase, game.total, speech, tts]);
 
   useEffect(() => {
     const shouldListen =
+      !speechPaused &&
       !tts.speaking &&
       (game.phase === "playing" ||
         game.phase === "correct" ||
@@ -152,7 +158,7 @@ export default function App() {
     if (!shouldListen && speech.listening) {
       speech.stop();
     }
-  }, [game.phase, speech, tts.speaking]);
+  }, [game.phase, speech, speechPaused, tts.speaking]);
 
   useEffect(() => {
     if (!game.dexVisible) {
@@ -163,6 +169,7 @@ export default function App() {
     if (spokenDexId.current === game.current.id) return;
 
     spokenDexId.current = game.current.id;
+    setSpeechPaused(true);
     speech.stop();
     tts.speak(
       `${game.current.zh}，${game.pokedexEntry.category}。属性：${game.pokedexEntry.types.join("、")}。${game.pokedexEntry.intro}${game.pokedexEntry.trivia}`,
