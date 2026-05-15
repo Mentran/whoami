@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { getPokedexEntry } from "../data/pokedex";
 import type { Pokemon } from "../data/pokemon";
 
 export type Phase =
@@ -86,6 +87,7 @@ export function usePokemonGame(list: Pokemon[]) {
   const [difficulty, setDifficulty] = useState<Difficulty>("normal");
   const [current, setCurrent] = useState(() => pickNext(list));
   const [answer, setAnswer] = useState("");
+  const [dexVisible, setDexVisible] = useState(false);
   const [notice, setNotice] = useState("");
   const [revealed, setRevealed] = useState(false);
   const [phase, setPhase] = useState<Phase>("ready");
@@ -131,6 +133,8 @@ export function usePokemonGame(list: Pokemon[]) {
     return [current.zh, current.en, ...aliases].map(normalizeAnswer);
   }, [current, difficulty]);
 
+  const pokedexEntry = useMemo(() => getPokedexEntry(current.id, current.zh), [current]);
+
   const status = useMemo(() => {
     if (phase === "ready") return "INSERT COIN... PRESS START";
     if (phase === "finished") return "GAME SET... PRESS START";
@@ -141,8 +145,9 @@ export function usePokemonGame(list: Pokemon[]) {
     if (phase === "skipped") return `SKIPPED! 答案是 ${current.zh}`;
     if (phase === "timeout") return `TIME UP! 答案是 ${current.zh}`;
     if (notice) return notice;
+    if (dexVisible) return "POKEDEX... 资料显示中";
     return `READY... ${timeLeft}s`;
-  }, [current.zh, notice, phase, timeLeft]);
+  }, [current.zh, dexVisible, notice, phase, timeLeft]);
 
   const feedback = useMemo(() => {
     if (phase === "ready") return "PRESS START";
@@ -153,13 +158,18 @@ export function usePokemonGame(list: Pokemon[]) {
     if (phase === "wrong") return "差一点，再来一题";
     if (phase === "skipped") return "已跳过";
     if (phase === "timeout") return "时间到";
+    if (dexVisible) return `${pokedexEntry.category} / ${pokedexEntry.types.join("·")}`;
     if (notice) return notice;
     return "我是谁？";
-  }, [current, hit, notice, phase]);
+  }, [current, dexVisible, hit, notice, phase, pokedexEntry]);
 
   function updateAnswer(value: string) {
     setAnswer(value);
     if (notice) setNotice("");
+  }
+
+  function showDex() {
+    setDexVisible(true);
   }
 
   function clearPhaseTimer() {
@@ -202,6 +212,7 @@ export function usePokemonGame(list: Pokemon[]) {
     if (!normalized) return;
 
     setAnswer(rawAnswer);
+    setDexVisible(false);
     const isCorrect = acceptedAnswers.includes(normalized);
     if (difficulty !== "hard" && !isCorrect && isCloseAnswer(normalized, acceptedAnswers)) {
       setNotice("CLOSE! 很接近，再完整一点");
@@ -221,12 +232,14 @@ export function usePokemonGame(list: Pokemon[]) {
     if (phase !== "playing") return;
 
     setRevealed(true);
+    setDexVisible(false);
     setPhase("skipped");
     recordRound(false);
   }
 
   function start() {
     setAnswer("");
+    setDexVisible(false);
     setNotice("");
     setHit(0);
     setTotal(0);
@@ -259,6 +272,7 @@ export function usePokemonGame(list: Pokemon[]) {
 
       setCurrent((previous) => pickNext(pool, previous.id));
       setAnswer("");
+      setDexVisible(false);
       setNotice("");
       setRevealed(false);
       enterRound();
@@ -280,14 +294,17 @@ export function usePokemonGame(list: Pokemon[]) {
     canSkip: phase === "playing",
     current,
     difficulty,
+    dexVisible,
     feedback,
     hit,
     next,
     phase,
+    pokedexEntry,
     revealed,
     roundLimit: ROUND_LIMIT,
     setAnswer: updateAnswer,
     setDifficulty,
+    showDex,
     skip,
     start,
     status,

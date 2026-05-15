@@ -79,6 +79,11 @@ export function useSfx() {
     });
   }, []);
 
+  const setMutedValue = useCallback((next: boolean) => {
+    setMuted(next);
+    localStorage.setItem(MUTED_KEY, String(next));
+  }, []);
+
   const play = useCallback(
     (name: SoundName) => {
       if (muted) return;
@@ -93,5 +98,5 @@ export function useSfx() {
     [muted],
   );
 
-  return { muted, play, toggleMuted };
+  return { muted, play, setMuted: setMutedValue, toggleMuted };
 }

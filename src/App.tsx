@@ -1,20 +1,55 @@
 import { useEffect, useRef, useState } from "react";
-import { AnswerBox } from "./components/AnswerBox";
 import { ConsoleFrame } from "./components/ConsoleFrame";
 import { GameScreen } from "./components/GameScreen";
 import { ScoreDisplay } from "./components/ScoreDisplay";
+import { VoicePanel } from "./components/VoicePanel";
 import { pokemonList } from "./data/pokemon";
 import { useSfx } from "./hooks/useSfx";
 import { usePokemonGame } from "./hooks/usePokemonGame";
 import { useSpeechInput } from "./hooks/useSpeechInput";
 import { createResultText } from "./utils/result";
+import { extractVoiceAnswer, parseVoiceCommand } from "./utils/voiceCommands";
 
 export default function App() {
   const game = usePokemonGame(pokemonList);
   const sfx = useSfx();
-  const speech = useSpeechInput((text) => game.submitAnswer(text));
   const previousPhase = useRef(game.phase);
+  const [lastHeard, setLastHeard] = useState("");
   const [shareStatus, setShareStatus] = useState("");
+
+  function handleVoiceResult(text: string) {
+    setLastHeard(text);
+
+    const command = parseVoiceCommand(text);
+    if (command === "next" || command === "skip") {
+      game.next();
+      return;
+    }
+
+    if (command === "restart") {
+      game.start();
+      return;
+    }
+
+    if (command === "intro") {
+      game.showDex();
+      return;
+    }
+
+    if (command === "mute") {
+      sfx.setMuted(true);
+      return;
+    }
+
+    if (command === "unmute") {
+      sfx.setMuted(false);
+      return;
+    }
+
+    game.submitAnswer(extractVoiceAnswer(text));
+  }
+
+  const speech = useSpeechInput(handleVoiceResult);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -48,6 +83,11 @@ export default function App() {
   }, [game.phase, sfx]);
 
   useEffect(() => {
+    if (game.phase === "playing" && speech.canAutoRestart && !speech.listening) {
+      speech.start();
+      return;
+    }
+
     if (game.phase !== "playing" && speech.listening) {
       speech.stop();
     }
@@ -134,20 +174,16 @@ export default function App() {
           setDifficulty={game.setDifficulty}
           timeLeft={game.timeLeft}
           total={game.total}
+          pokedexEntry={game.pokedexEntry}
+          showDex={game.dexVisible}
         />
-        <AnswerBox
-          disabled={!game.canAnswer}
-          speechError={speech.error}
-          speechInterimText={speech.interimText}
-          speechListening={speech.listening}
-          speechSupported={speech.supported}
-          value={game.answer}
-          onChange={game.setAnswer}
-          onSubmit={game.submit}
-          onNext={game.next}
-          onVoiceStart={speech.start}
-          onVoiceStop={speech.stop}
-          revealed={game.revealed}
+        <VoicePanel
+          error={speech.error}
+          interimText={speech.interimText}
+          lastHeard={lastHeard}
+          listening={speech.listening}
+          phaseLabel={game.status}
+          supported={speech.supported}
         />
       </ConsoleFrame>
     </main>

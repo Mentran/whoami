@@ -1,10 +1,12 @@
 import { artworkUrl, type Pokemon } from "../data/pokemon";
+import type { PokedexEntry } from "../data/pokedex";
 import type { Difficulty, Phase } from "../hooks/usePokemonGame";
 import { difficultyLabels, getRating, getRatingText } from "../utils/result";
 
 type GameScreenProps = {
   difficulty: Difficulty;
   pokemon: Pokemon;
+  pokedexEntry: PokedexEntry;
   revealed: boolean;
   feedback: string;
   hit: number;
@@ -15,6 +17,7 @@ type GameScreenProps = {
   roundSeconds: number;
   shareStatus: string;
   setDifficulty: (difficulty: Difficulty) => void;
+  showDex: boolean;
   timeLeft: number;
   total: number;
 };
@@ -22,6 +25,7 @@ type GameScreenProps = {
 export function GameScreen({
   difficulty,
   pokemon,
+  pokedexEntry,
   revealed,
   feedback,
   hit,
@@ -32,6 +36,7 @@ export function GameScreen({
   roundSeconds,
   shareStatus,
   setDifficulty,
+  showDex,
   timeLeft,
   total,
 }: GameScreenProps) {
@@ -104,6 +109,16 @@ export function GameScreen({
             </div>
             <p className={isTimeUrgent ? "timer-text urgent" : "timer-text"}>{timeLeft}s</p>
             <p className="feedback">{feedback}</p>
+            {showDex && (
+              <div className="pokedex-panel">
+                <strong>
+                  #{String(pokemon.id).padStart(3, "0")} {pokemon.zh}
+                </strong>
+                <span>{pokedexEntry.types.join(" / ")}</span>
+                <p>{pokedexEntry.intro}</p>
+                <small>{pokedexEntry.trivia}</small>
+              </div>
+            )}
             <p className="brand">
               POCKET
               <br />

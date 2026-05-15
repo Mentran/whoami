@@ -51,6 +51,8 @@ export function useSpeechInput(onResult: SpeechRecognitionResultHandler) {
   const [error, setError] = useState("");
   const [interimText, setInterimText] = useState("");
   const [listening, setListening] = useState(false);
+  const [blocked, setBlocked] = useState(false);
+  const [session, setSession] = useState(0);
   const supported = useMemo(() => Boolean(getSpeechRecognition()), []);
 
   useEffect(() => {
@@ -66,6 +68,7 @@ export function useSpeechInput(onResult: SpeechRecognitionResultHandler) {
   const stop = useCallback(() => {
     recognitionRef.current?.stop();
     setListening(false);
+    setSession((current) => current + 1);
   }, []);
 
   const start = useCallback(() => {
@@ -85,6 +88,7 @@ export function useSpeechInput(onResult: SpeechRecognitionResultHandler) {
     recognitionRef.current = recognition;
 
     setError("");
+    setBlocked(false);
     setInterimText("");
     setListening(true);
 
@@ -110,11 +114,14 @@ export function useSpeechInput(onResult: SpeechRecognitionResultHandler) {
 
     recognition.onerror = (event) => {
       setError(getSpeechErrorMessage(event.error));
+      if (event.error === "not-allowed" || event.error === "service-not-allowed") setBlocked(true);
       setListening(false);
+      setSession((current) => current + 1);
     };
 
     recognition.onend = () => {
       setListening(false);
+      setSession((current) => current + 1);
     };
 
     try {
@@ -122,16 +129,21 @@ export function useSpeechInput(onResult: SpeechRecognitionResultHandler) {
     } catch {
       setError("语音识别启动失败");
       setListening(false);
+      setSession((current) => current + 1);
     }
   }, []);
 
-  return {
-    error,
-    interimText,
-    listening,
-    start,
-    stop,
-    supported,
-  };
+  return useMemo(
+    () => ({
+      canAutoRestart: supported && !blocked,
+      error,
+      interimText,
+      listening,
+      session,
+      start,
+      stop,
+      supported,
+    }),
+    [blocked, error, interimText, listening, session, start, stop, supported],
+  );
 }
-
