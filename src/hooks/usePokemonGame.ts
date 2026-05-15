@@ -132,7 +132,7 @@ export function usePokemonGame(list: Pokemon[]) {
     return [current.zh, current.en, ...aliases].map(normalizeAnswer);
   }, [current, difficulty]);
 
-  const pokedexEntry = useMemo(() => getPokedexEntry(current.id, current.zh), [current]);
+  const pokedexEntry = useMemo(() => getPokedexEntry(current.id), [current.id]);
 
   const status = useMemo(() => {
     if (phase === "ready") return "选择难度后，点击开始挑战";
