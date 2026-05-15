@@ -151,14 +151,14 @@ export default function App() {
     try {
       if (navigator.share) {
         await navigator.share(shareData);
-        setShareStatus("SHARED!");
+        setShareStatus("已打开系统分享");
         return;
       }
 
       await navigator.clipboard.writeText(`${text} ${window.location.href}`);
-      setShareStatus("COPIED!");
+      setShareStatus("结果已复制");
     } catch {
-      setShareStatus("COPY FAILED");
+      setShareStatus("分享失败，请稍后再试");
     }
   }
 

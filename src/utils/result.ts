@@ -1,9 +1,9 @@
 import type { Difficulty } from "../hooks/usePokemonGame";
 
 export const difficultyLabels: Record<Difficulty, string> = {
-  easy: "EASY",
-  normal: "NORMAL",
-  hard: "HARD",
+  easy: "简单",
+  normal: "普通",
+  hard: "困难",
 };
 
 export const difficultyNames: Record<Difficulty, string> = {
@@ -31,6 +31,5 @@ export function getRatingText(hit: number, roundLimit: number) {
 export function createResultText(hit: number, roundLimit: number, difficulty: Difficulty) {
   const rating = getRating(hit, roundLimit);
   const difficultyName = difficultyNames[difficulty];
-  return `我在「我是谁？」宝可梦剪影挑战中拿到 ${hit}/${roundLimit}，难度：${difficultyName}，评级：${rating}。`;
+  return `我在「我是谁？」宝可梦剪影挑战中拿到 ${hit}/${roundLimit}，难度：${difficultyName}，评级：${getRatingText(hit, roundLimit)}。`;
 }
-

@@ -18,10 +18,9 @@ export function VoicePanel({ error, interimText, lastHeard, listening, phaseLabe
         <span />
       </div>
       <div className="voice-copy">
-        <strong>{supported ? (listening ? "LISTENING..." : "VOICE READY") : "VOICE OFF"}</strong>
+        <strong>{supported ? (listening ? "正在听你说..." : "等待语音") : "语音不可用"}</strong>
         <p className={error ? "error" : ""}>{supported ? displayText : "当前浏览器不支持语音识别"}</p>
       </div>
     </section>
   );
 }
-

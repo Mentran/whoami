@@ -135,23 +135,23 @@ export function usePokemonGame(list: Pokemon[]) {
   const pokedexEntry = useMemo(() => getPokedexEntry(current.id, current.zh), [current]);
 
   const status = useMemo(() => {
-    if (phase === "ready") return "INSERT COIN... PRESS START";
-    if (phase === "finished") return "GAME SET... PRESS START";
-    if (phase === "entering") return "SCANNING... 黑影载入";
-    if (phase === "transitioning") return "TUNING... 下一题";
-    if (phase === "correct") return "CORRECT! 可说：下一题 / 介绍一下";
-    if (phase === "skipped") return `SKIPPED! 答案是 ${current.zh}`;
-    if (phase === "timeout") return `TIME UP! 答案是 ${current.zh}；可说：下一题 / 介绍一下`;
+    if (phase === "ready") return "选择难度后，点击开始挑战";
+    if (phase === "finished") return "挑战完成，可以再来一局";
+    if (phase === "entering") return "正在载入剪影";
+    if (phase === "transitioning") return "正在切换下一题";
+    if (phase === "correct") return "答对了！可说：下一题 / 介绍一下";
+    if (phase === "skipped") return `已跳过，答案是 ${current.zh}；可说：下一题 / 介绍一下`;
+    if (phase === "timeout") return `时间到，答案是 ${current.zh}；可说：下一题 / 介绍一下`;
     if (notice) return notice;
-    if (dexVisible) return "POKEDEX... 资料显示中";
-    return `READY... ${timeLeft}s`;
+    if (dexVisible) return "图鉴资料显示中";
+    return `请说出宝可梦名字，还剩 ${timeLeft} 秒`;
   }, [current.zh, dexVisible, notice, phase, timeLeft]);
 
   const feedback = useMemo(() => {
-    if (phase === "ready") return "PRESS START";
+    if (phase === "ready") return "准备开始";
     if (phase === "finished") return `命中 ${hit}/${ROUND_LIMIT}`;
-    if (phase === "entering") return "信号接入中";
-    if (phase === "transitioning") return "频道切换中";
+    if (phase === "entering") return "剪影出现中";
+    if (phase === "transitioning") return "下一题马上来";
     if (phase === "correct") return `${current.zh} / ${current.en}`;
     if (phase === "skipped") return "已跳过";
     if (phase === "timeout") return "时间到";
@@ -213,12 +213,12 @@ export function usePokemonGame(list: Pokemon[]) {
     setNotice("");
     const isCorrect = acceptedAnswers.includes(normalized);
     if (difficulty !== "hard" && !isCorrect && isCloseAnswer(normalized, acceptedAnswers)) {
-      setNotice("CLOSE! 很接近，再完整一点");
+      setNotice("很接近，再完整一点");
       return "close";
     }
 
     if (!isCorrect) {
-      setNotice("NOT IT! 继续猜");
+      setNotice("不是它，继续猜");
       return "wrong";
     }
 

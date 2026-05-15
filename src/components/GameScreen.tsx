@@ -49,7 +49,8 @@ export function GameScreen({
     <div className={`game-screen phase-${phase}`}>
       {isReady && (
         <div className="start-screen">
-          <span className="start-title">WHO'S THAT?</span>
+          <span className="start-title">我是谁？</span>
+          <p className="start-subtitle">看剪影，说出宝可梦名字</p>
           <div className="difficulty-picker" aria-label="选择难度">
             {(["easy", "normal", "hard"] as Difficulty[]).map((mode) => (
               <button
@@ -63,14 +64,14 @@ export function GameScreen({
             ))}
           </div>
           <button className="start-action" onClick={onStart} type="button">
-            PRESS START
+            开始挑战
           </button>
         </div>
       )}
 
       {isFinished && (
         <div className="result-screen">
-          <span className="result-title">GAME SET</span>
+          <span className="result-title">挑战完成</span>
           <strong>
             {hit}/{roundLimit}
           </strong>
@@ -78,10 +79,10 @@ export function GameScreen({
           <span className="result-copy">{getRatingText(hit, roundLimit)}</span>
           <div className="result-actions">
             <button className="share-action" onClick={onShareResult} type="button">
-              SHARE
+              分享结果
             </button>
             <button className="start-action" onClick={onStart} type="button">
-              PLAY AGAIN
+              再来一局
             </button>
           </div>
           {shareStatus && <span className="share-status">{shareStatus}</span>}
@@ -101,7 +102,7 @@ export function GameScreen({
 
           <div className="prompt-panel">
             <p className="round-count">
-              ROUND {Math.min(total + 1, roundLimit)}/{roundLimit}
+              第 {Math.min(total + 1, roundLimit)} / {roundLimit} 题
             </p>
             <p className="question">{revealed ? "就是它！" : "我是谁？"}</p>
             <div className={isTimeUrgent ? "power-meter urgent" : "power-meter"} aria-label={`剩余 ${timeLeft} 秒`}>
