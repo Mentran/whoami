@@ -7,6 +7,7 @@ import { pokemonList } from "./data/pokemon";
 import { useSfx } from "./hooks/useSfx";
 import { usePokemonGame } from "./hooks/usePokemonGame";
 import { useSpeechInput } from "./hooks/useSpeechInput";
+import { useTts } from "./hooks/useTts";
 import { createResultText } from "./utils/result";
 import { extractVoiceAnswer, parseVoiceCommand } from "./utils/voiceCommands";
 
@@ -17,7 +18,9 @@ function isRoundRevealed(phase: string) {
 export default function App() {
   const game = usePokemonGame(pokemonList);
   const sfx = useSfx();
+  const tts = useTts();
   const previousPhase = useRef(game.phase);
+  const spokenDexId = useRef<number | null>(null);
   const [lastHeard, setLastHeard] = useState("");
   const [shareStatus, setShareStatus] = useState("");
 
@@ -65,6 +68,7 @@ export default function App() {
       }
 
       if (command === "intro") {
+        sfx.play("pokedex");
         game.showDex();
         return;
       }
@@ -119,10 +123,11 @@ export default function App() {
 
   useEffect(() => {
     const shouldListen =
-      game.phase === "playing" ||
-      game.phase === "correct" ||
-      game.phase === "timeout" ||
-      game.phase === "skipped";
+      !tts.speaking &&
+      (game.phase === "playing" ||
+        game.phase === "correct" ||
+        game.phase === "timeout" ||
+        game.phase === "skipped");
 
     if (shouldListen && speech.canAutoRestart && !speech.listening) {
       speech.start();
@@ -132,7 +137,22 @@ export default function App() {
     if (!shouldListen && speech.listening) {
       speech.stop();
     }
-  }, [game.phase, speech]);
+  }, [game.phase, speech, tts.speaking]);
+
+  useEffect(() => {
+    if (!game.dexVisible) {
+      spokenDexId.current = null;
+      return;
+    }
+
+    if (spokenDexId.current === game.current.id) return;
+
+    spokenDexId.current = game.current.id;
+    speech.stop();
+    tts.speak(
+      `${game.current.zh}，${game.pokedexEntry.category}。属性：${game.pokedexEntry.types.join("、")}。${game.pokedexEntry.intro}${game.pokedexEntry.trivia}`,
+    );
+  }, [game.current, game.dexVisible, game.pokedexEntry, speech, tts]);
 
   useEffect(() => {
     if (game.phase !== "finished" && shareStatus) {
@@ -221,10 +241,11 @@ export default function App() {
         <VoicePanel
           error={speech.error}
           interimText={speech.interimText}
-          lastHeard={lastHeard}
-          listening={speech.listening}
+          lastHeard={tts.error || lastHeard}
+          listening={speech.listening || tts.speaking}
           phaseLabel={game.status}
           supported={speech.supported}
+          title={tts.speaking ? "正在朗读百科..." : undefined}
         />
       </ConsoleFrame>
     </main>
