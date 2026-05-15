@@ -11,49 +11,49 @@ export const pokedex: Record<number, PokedexEntry> = {
   1: {
     category: "种子宝可梦",
     intro: "背上的种子会和身体一起成长，储存能量后能释放草属性招式。",
-    trivia: "经典初代御三家之一，剪影很容易被背上的种子认出来。",
+    trivia: "吸收阳光后，背上的种子会逐渐变大，并为进化积蓄养分。",
     types: ["草", "毒"],
   },
   4: {
     category: "蜥蜴宝可梦",
     intro: "尾巴上的火焰代表生命力，情绪高涨时火焰会燃得更旺。",
-    trivia: "进化后的喷火龙是最具代表性的初代宝可梦之一。",
+    trivia: "尾焰如果微弱，说明它的体力可能正在下降。",
     types: ["火"],
   },
   7: {
     category: "小龟宝可梦",
     intro: "遇到危险时会缩进壳里，再用水枪反击。",
-    trivia: "杰尼龟小队让它在动画观众心里很有存在感。",
+    trivia: "它的甲壳不只是防御工具，也能帮助它在水中稳定游动。",
     types: ["水"],
   },
   25: {
     category: "鼠宝可梦",
     intro: "脸颊两侧有储电囊，紧张或兴奋时会放出电流。",
-    trivia: "动画中最经典的伙伴型宝可梦，也是这类猜影子游戏的灵魂角色。",
+    trivia: "同伴之间会把尾巴贴在一起交换电力。",
     types: ["电"],
   },
   39: {
     category: "气球宝可梦",
     intro: "会用大大的眼睛吸引对手，然后唱出让人睡着的歌。",
-    trivia: "动画里常因为听众睡着而生气涂鸦。",
+    trivia: "它能像气球一样吸入空气，让身体变得更圆。",
     types: ["一般", "妖精"],
   },
   52: {
     category: "妖怪猫宝可梦",
     intro: "喜欢圆形闪亮物，额头上的金币是它的标志。",
-    trivia: "火箭队的喵喵因为会说人话，记忆点非常强。",
+    trivia: "夜里活动时，会悄悄寻找发光的硬币或小物件。",
     types: ["一般"],
   },
   54: {
     category: "鸭宝可梦",
     intro: "经常头痛，头痛加剧时会突然释放神秘力量。",
-    trivia: "可达鸭的呆萌表情是动画名场面常客。",
+    trivia: "它通常不记得自己使用过强大的念力。",
     types: ["水"],
   },
   94: {
     category: "影子宝可梦",
     intro: "喜欢躲在影子里，会用诡异的笑容吓唬对手。",
-    trivia: "耿鬼的剪影轮廓非常适合这个游戏。",
+    trivia: "据说周围突然变冷时，可能是耿鬼躲在附近。",
     types: ["幽灵", "毒"],
   },
   129: {
@@ -77,7 +77,7 @@ export const pokedex: Record<number, PokedexEntry> = {
   132: {
     category: "变身宝可梦",
     intro: "能重组身体细胞，变成看到的对手。",
-    trivia: "百变怪的剪影通常很有迷惑性。",
+    trivia: "如果只凭记忆变身，细节可能会出现差错。",
     types: ["一般"],
   },
   133: {
@@ -89,7 +89,7 @@ export const pokedex: Record<number, PokedexEntry> = {
   143: {
     category: "瞌睡宝可梦",
     intro: "每天大部分时间都在睡觉，醒来后会大量进食。",
-    trivia: "卡比兽的轮廓极其鲜明，是剪影题里的经典送分题。",
+    trivia: "它的胃非常强韧，几乎什么都能吃下去。",
     types: ["一般"],
   },
   144: {
@@ -101,7 +101,7 @@ export const pokedex: Record<number, PokedexEntry> = {
   145: {
     category: "电击宝可梦",
     intro: "传说中的鸟宝可梦，飞行时会伴随雷鸣。",
-    trivia: "初代三圣鸟之一，尖锐羽毛让剪影很有辨识度。",
+    trivia: "据说它出现时，天空会被雷云覆盖。",
     types: ["电", "飞行"],
   },
   146: {
@@ -135,9 +135,8 @@ export function getPokedexEntry(id: number, name: string): PokedexEntry {
     pokedex[id] || {
       category: "第一世代宝可梦",
       intro: `${name} 是关都地区图鉴编号 #${String(id).padStart(3, "0")} 的宝可梦。`,
-      trivia: "它来自最经典的第一世代题库，适合用剪影来考验记忆。",
+      trivia: "关于它的详细生态资料还需要继续补充。",
       types: fallbackTypes,
     }
   );
 }
-

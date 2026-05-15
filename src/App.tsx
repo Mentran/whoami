@@ -21,6 +21,7 @@ export default function App() {
   const tts = useTts();
   const previousPhase = useRef(game.phase);
   const spokenDexId = useRef<number | null>(null);
+  const spokenFailureKey = useRef("");
   const [lastHeard, setLastHeard] = useState("");
   const [shareStatus, setShareStatus] = useState("");
 
@@ -120,6 +121,20 @@ export default function App() {
 
     previousPhase.current = game.phase;
   }, [game.phase, sfx]);
+
+  useEffect(() => {
+    if (game.phase !== "timeout" && game.phase !== "skipped") {
+      spokenFailureKey.current = "";
+      return;
+    }
+
+    const failureKey = `${game.phase}-${game.current.id}-${game.total}`;
+    if (spokenFailureKey.current === failureKey) return;
+
+    spokenFailureKey.current = failureKey;
+    speech.stop();
+    tts.speak(`正确答案是，${game.current.zh}。你可以说，下一题，或者，介绍一下。`);
+  }, [game.current, game.phase, game.total, speech, tts]);
 
   useEffect(() => {
     const shouldListen =
