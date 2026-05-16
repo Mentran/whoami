@@ -578,6 +578,45 @@
 
 .voice-copy p.error {
   color: #8d2b1f;
+  overflow: visible;
+  white-space: normal;
+}
+
+.debug-answer {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.debug-answer input,
+.debug-answer button {
+  min-height: 38px;
+  border: 2px solid rgba(255, 255, 255, 0.32);
+  border-radius: 6px;
+  font: inherit;
+  font-size: 13px;
+}
+
+.debug-answer input {
+  min-width: 0;
+  padding: 0 10px;
+  color: #102241;
+  background: #fffef3;
+}
+
+.debug-answer button {
+  padding: 0 14px;
+  color: #fffef3;
+  font-weight: 900;
+  background: #253047;
+  cursor: pointer;
+}
+
+.debug-answer input:focus-visible,
+.debug-answer button:focus-visible {
+  outline: 4px solid rgba(255, 216, 79, 0.76);
+  outline-offset: 3px;
 }
 
 .console-controls {

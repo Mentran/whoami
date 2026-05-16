@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 import { ConsoleFrame } from "./components/ConsoleFrame";
 import { GameScreen } from "./components/GameScreen";
 import { ScoreDisplay } from "./components/ScoreDisplay";
@@ -6,95 +6,16 @@ import { VoicePanel } from "./components/VoicePanel";
 import { pokemonList } from "./data/pokemon";
 import { useSfx } from "./hooks/useSfx";
 import { usePokemonGame } from "./hooks/usePokemonGame";
-import { useSpeechInput } from "./hooks/useSpeechInput";
-import { useTts } from "./hooks/useTts";
+import { useVoiceGameController } from "./hooks/useVoiceGameController";
 import { createResultText } from "./utils/result";
-import { extractVoiceAnswer, parseVoiceCommand } from "./utils/voiceCommands";
-
-function isRoundRevealed(phase: string) {
-  return phase === "correct" || phase === "timeout" || phase === "skipped";
-}
 
 export default function App() {
   const game = usePokemonGame(pokemonList);
   const sfx = useSfx();
-  const [speechPaused, setSpeechPaused] = useState(false);
-  const tts = useTts(() => setSpeechPaused(false));
+  const voice = useVoiceGameController(game, sfx);
   const previousPhase = useRef(game.phase);
-  const spokenDexId = useRef<number | null>(null);
-  const spokenFailureKey = useRef("");
-  const [lastHeard, setLastHeard] = useState("");
+  const [debugAnswer, setDebugAnswer] = useState("");
   const [shareStatus, setShareStatus] = useState("");
-
-  function handleVoiceResult(text: string) {
-    setLastHeard(text);
-
-    const command = parseVoiceCommand(text);
-
-    if (command === "mute") {
-      sfx.setMuted(true);
-      return;
-    }
-
-    if (command === "unmute") {
-      sfx.setMuted(false);
-      return;
-    }
-
-    if (command === "restart") {
-      tts.stop();
-      game.start();
-      return;
-    }
-
-    if (game.phase === "playing") {
-      if (command === "next" || command === "skip") {
-        game.skip();
-        return;
-      }
-
-      if (command === "intro") {
-        return;
-      }
-
-      const result = game.tryAnswer(extractVoiceAnswer(text));
-      if (result === "wrong" || result === "close") {
-        sfx.play("wrong");
-      }
-      return;
-    }
-
-    if (isRoundRevealed(game.phase)) {
-      if (command === "next" || command === "skip") {
-        tts.stop();
-        game.next();
-        return;
-      }
-
-      if (command === "intro") {
-        sfx.play("pokedex");
-        game.showDex();
-        return;
-      }
-
-      return;
-    }
-
-    if (game.phase === "ready" || game.phase === "finished") {
-      if (command === "next") {
-        game.start();
-      }
-      return;
-    }
-
-    if (command === "next" || command === "skip") {
-      tts.stop();
-      game.next();
-      return;
-    }
-  }
-
-  const speech = useSpeechInput(handleVoiceResult);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -102,7 +23,7 @@ export default function App() {
       const isTyping = target?.tagName === "INPUT" || target?.tagName === "TEXTAREA";
 
       if (event.key === "Enter" && !isTyping) {
-        game.next();
+        voice.advanceFromGesture();
       }
 
       if (event.key === "Escape") {
@@ -112,7 +33,7 @@ export default function App() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [game]);
+  }, [game, voice]);
 
   useEffect(() => {
     if (previousPhase.current === game.phase) return;
@@ -127,60 +48,17 @@ export default function App() {
   }, [game.phase, sfx]);
 
   useEffect(() => {
-    if (game.phase !== "timeout" && game.phase !== "skipped") {
-      spokenFailureKey.current = "";
-      return;
-    }
-
-    const failureKey = `${game.phase}-${game.current.id}-${game.total}`;
-    if (spokenFailureKey.current === failureKey) return;
-
-    spokenFailureKey.current = failureKey;
-    setSpeechPaused(true);
-    speech.stop();
-    tts.speak(`正确答案是，${game.current.zh}。你可以说，下一题，或者，介绍一下。`);
-  }, [game.current, game.phase, game.total, speech, tts]);
-
-  useEffect(() => {
-    const shouldListen =
-      !speechPaused &&
-      !tts.speaking &&
-      (game.phase === "playing" ||
-        game.phase === "correct" ||
-        game.phase === "timeout" ||
-        game.phase === "skipped");
-
-    if (shouldListen && speech.canAutoRestart && !speech.listening) {
-      speech.start();
-      return;
-    }
-
-    if (!shouldListen && speech.listening) {
-      speech.stop();
-    }
-  }, [game.phase, speech, speechPaused, tts.speaking]);
-
-  useEffect(() => {
-    if (!game.dexVisible) {
-      spokenDexId.current = null;
-      return;
-    }
-
-    if (spokenDexId.current === game.current.id) return;
-
-    spokenDexId.current = game.current.id;
-    setSpeechPaused(true);
-    speech.stop();
-    tts.speak(
-      `${game.current.zh}，${game.pokedexEntry.category}。属性：${game.pokedexEntry.types.join("、")}。${game.pokedexEntry.intro}${game.pokedexEntry.trivia}`,
-    );
-  }, [game.current, game.dexVisible, game.pokedexEntry, speech, tts]);
-
-  useEffect(() => {
     if (game.phase !== "finished" && shareStatus) {
       setShareStatus("");
     }
   }, [game.phase, shareStatus]);
+
+  function handleDebugSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!debugAnswer.trim()) return;
+    voice.submitDebugAnswer(debugAnswer);
+    setDebugAnswer("");
+  }
 
   async function shareResult() {
     const text = createResultText(game.hit, game.roundLimit, game.difficulty);
@@ -221,7 +99,7 @@ export default function App() {
             <button
               className="round-button primary"
               disabled={!game.canAdvance}
-              onClick={game.next}
+              onClick={voice.advanceFromGesture}
               title="开始 / 下一步"
               type="button"
             >
@@ -249,7 +127,7 @@ export default function App() {
           feedback={game.feedback}
           hit={game.hit}
           phase={game.phase}
-          onStart={game.start}
+          onStart={voice.startGameFromGesture}
           onShareResult={shareResult}
           roundLimit={game.roundLimit}
           roundSeconds={game.roundSeconds}
@@ -261,14 +139,26 @@ export default function App() {
           showDex={game.dexVisible}
         />
         <VoicePanel
-          error={speech.error}
-          interimText={speech.interimText}
-          lastHeard={tts.error || lastHeard}
-          listening={speech.listening || tts.speaking}
+          error={voice.speech.error}
+          interimText={voice.speech.interimText}
+          lastHeard={voice.tts.error || voice.lastHeard}
+          listening={voice.speech.listening || voice.tts.speaking}
           phaseLabel={game.status}
-          supported={speech.supported}
-          title={tts.speaking ? "正在朗读百科..." : undefined}
+          supported={voice.speech.supported}
+          title={voice.voicePanelTitle}
         />
+        {import.meta.env.DEV && (
+          <form className="debug-answer" onSubmit={handleDebugSubmit}>
+            <input
+              aria-label="开发调试答案"
+              onChange={(event) => setDebugAnswer(event.target.value)}
+              placeholder="开发调试：输入答案或指令"
+              type="text"
+              value={debugAnswer}
+            />
+            <button type="submit">发送</button>
+          </form>
+        )}
       </ConsoleFrame>
     </main>
   );

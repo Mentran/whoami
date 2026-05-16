@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getPokedexEntry } from "../data/pokedex";
 import type { Pokemon } from "../data/pokemon";
+import { getAcceptedAnswers, isCloseAnswer, normalizeAnswer } from "../utils/answerMatching";
 
 export type Phase =
   | "ready"
@@ -23,43 +24,6 @@ const EASY_POOL = new Set([
   104, 113, 129, 130, 131, 133, 134, 135, 136, 143, 150, 151,
 ]);
 const HARD_EXCLUDED_POOL = new Set([1, 4, 7, 25, 39, 52, 54, 129, 133, 143, 150, 151]);
-
-function normalizeAnswer(value: string) {
-  return value.trim().replace(/\s+/g, "").toLowerCase();
-}
-
-function levenshteinDistance(left: string, right: string) {
-  const rows = Array.from({ length: left.length + 1 }, (_, index) => [index]);
-
-  for (let column = 1; column <= right.length; column += 1) {
-    rows[0][column] = column;
-  }
-
-  for (let row = 1; row <= left.length; row += 1) {
-    for (let column = 1; column <= right.length; column += 1) {
-      const cost = left[row - 1] === right[column - 1] ? 0 : 1;
-      rows[row][column] = Math.min(
-        rows[row - 1][column] + 1,
-        rows[row][column - 1] + 1,
-        rows[row - 1][column - 1] + cost,
-      );
-    }
-  }
-
-  return rows[left.length][right.length];
-}
-
-function isCloseAnswer(answer: string, acceptedAnswers: string[]) {
-  if (answer.length < 2) return false;
-
-  return acceptedAnswers.some((accepted) => {
-    if (accepted.length < 3) return false;
-    if (accepted.startsWith(answer) || answer.startsWith(accepted)) return true;
-
-    const maxDistance = accepted.length >= 6 ? 2 : 1;
-    return levenshteinDistance(answer, accepted) <= maxDistance;
-  });
-}
 
 function pickNext(list: Pokemon[], previousId?: number) {
   if (list.length === 1) return list[0];
@@ -128,8 +92,7 @@ export function usePokemonGame(list: Pokemon[]) {
   const pool = useMemo(() => getPool(list, difficulty), [difficulty, list]);
 
   const acceptedAnswers = useMemo(() => {
-    const aliases = difficulty === "hard" ? [] : current.aliases;
-    return [current.zh, current.en, ...aliases].map(normalizeAnswer);
+    return getAcceptedAnswers(current, difficulty);
   }, [current, difficulty]);
 
   const pokedexEntry = useMemo(() => getPokedexEntry(current.id), [current.id]);

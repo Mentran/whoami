@@ -223,6 +223,7 @@ export const pokemonList: Pokemon[] = [
     "en": "pikachu",
     "aliases": [
       "比卡丘",
+      "比卡超",
       "皮卡",
       "pikachu"
     ]
