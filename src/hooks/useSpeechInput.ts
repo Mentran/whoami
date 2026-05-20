@@ -41,6 +41,7 @@ function getSpeechRecognition() {
 function getSpeechErrorMessage(error: string) {
   if (error === "not-allowed" || error === "service-not-allowed") return "麦克风权限被拒绝";
   if (error === "no-speech") return "没有听到声音";
+  if (error === "aborted") return "";
   if (error === "audio-capture") return "没有可用麦克风";
   if (error === "network") return "语音服务网络异常";
   return "语音识别失败";
@@ -59,6 +60,7 @@ function getMediaErrorMessage(error: unknown) {
 export function useSpeechInput(onResult: SpeechRecognitionResultHandler) {
   const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
   const onResultRef = useRef(onResult);
+  const recognitionRunId = useRef(0);
   const [error, setError] = useState("");
   const [interimText, setInterimText] = useState("");
   const [listening, setListening] = useState(false);
@@ -74,6 +76,7 @@ export function useSpeechInput(onResult: SpeechRecognitionResultHandler) {
 
   useEffect(() => {
     return () => {
+      recognitionRunId.current += 1;
       recognitionRef.current?.abort();
     };
   }, []);
@@ -115,7 +118,12 @@ export function useSpeechInput(onResult: SpeechRecognitionResultHandler) {
   }, []);
 
   const stop = useCallback(() => {
-    recognitionRef.current?.stop();
+    recognitionRunId.current += 1;
+    const recognition = recognitionRef.current;
+    recognitionRef.current = null;
+
+    recognition?.stop();
+    setInterimText("");
     setListening(false);
     setSession((current) => current + 1);
   }, []);
@@ -155,7 +163,12 @@ export function useSpeechInput(onResult: SpeechRecognitionResultHandler) {
       if (!allowed) return;
     }
 
-    recognitionRef.current?.abort();
+    const runId = recognitionRunId.current + 1;
+    recognitionRunId.current = runId;
+
+    const previousRecognition = recognitionRef.current;
+    recognitionRef.current = null;
+    previousRecognition?.abort();
 
     const recognition = new SpeechRecognition();
     recognition.lang = "zh-CN";
@@ -170,6 +183,8 @@ export function useSpeechInput(onResult: SpeechRecognitionResultHandler) {
     setListening(true);
 
     recognition.onresult = (event) => {
+      if (runId !== recognitionRunId.current) return;
+
       let interim = "";
 
       for (let index = event.resultIndex; index < event.results.length; index += 1) {
@@ -194,20 +209,31 @@ export function useSpeechInput(onResult: SpeechRecognitionResultHandler) {
     };
 
     recognition.onstart = () => {
+      if (runId !== recognitionRunId.current) return;
       setPermissionState("granted");
     };
 
     recognition.onerror = (event) => {
-      setError(getSpeechErrorMessage(event.error));
+      if (runId !== recognitionRunId.current) return;
+
+      const message = getSpeechErrorMessage(event.error);
+      if (!message) return;
+
+      setError(event.error === "no-speech" ? "" : message);
       if (event.error === "not-allowed" || event.error === "service-not-allowed") {
         setBlocked(true);
         setPermissionState("denied");
+      }
+      if (event.error === "network") {
+        setBlocked(true);
       }
       setListening(false);
       setSession((current) => current + 1);
     };
 
     recognition.onend = () => {
+      if (runId !== recognitionRunId.current) return;
+
       setListening(false);
       setSession((current) => current + 1);
     };
@@ -215,6 +241,8 @@ export function useSpeechInput(onResult: SpeechRecognitionResultHandler) {
     try {
       recognition.start();
     } catch {
+      if (runId !== recognitionRunId.current) return;
+
       setError("语音识别启动失败");
       setListening(false);
       setSession((current) => current + 1);

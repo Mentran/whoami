@@ -24,7 +24,9 @@ export function VoicePanel({
   const displayText = error
     ? error === "麦克风权限被拒绝"
       ? "麦克风权限被拒绝。请在 Chrome 地址栏和系统设置里允许麦克风，然后刷新页面。"
-      : `${error}，请检查浏览器权限后再点开始。`
+      : error === "语音服务网络异常"
+        ? "语音服务网络异常。Chrome 语音识别依赖在线服务，请先改用文字输入或稍后重试。"
+        : `${error}。可以改用文字输入，或重新点击开始尝试。`
     : !supported
       ? "当前浏览器不支持语音识别，请使用最新版 Chrome 或 Edge。"
       : !activated && permissionState !== "granted"
