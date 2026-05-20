@@ -1,5 +1,7 @@
 import { writeFile } from "node:fs/promises";
 
+const MAX_POKEMON = Number(process.env.POKEMON_MAX || process.argv[2] || 386);
+
 const typeNames = {
   bug: "虫",
   dragon: "龙",
@@ -76,7 +78,7 @@ async function fetchPokedexEntry(id) {
     name: zhName,
     entry: {
       category,
-      intro: flavors[0] || `${zhName} 是关都地区图鉴编号 #${String(id).padStart(3, "0")} 的宝可梦。`,
+      intro: flavors[0] || `${zhName} 是全国图鉴编号 #${String(id).padStart(3, "0")} 的宝可梦。`,
       trivia: flavors[1] || flavors[0] || "暂无更多图鉴描述。",
       types,
     },
@@ -101,7 +103,7 @@ async function runPool(ids, workerCount, worker) {
 }
 
 const entries = await runPool(
-  Array.from({ length: 151 }, (_, index) => index + 1),
+  Array.from({ length: MAX_POKEMON }, (_, index) => index + 1),
   6,
   fetchPokedexEntry,
 );

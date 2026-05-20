@@ -1,4 +1,7 @@
-import { writeFile } from "node:fs/promises";
+import { mkdir, stat, writeFile } from "node:fs/promises";
+
+const MAX_POKEMON = Number(process.env.POKEMON_MAX || process.argv[2] || 386);
+const ARTWORK_DIR = "public/pokemon-artwork";
 
 const aliases = {
   1: ["妙蛙", "种子", "蒜头王八", "奇异种子"],
@@ -136,6 +139,31 @@ const aliases = {
   149: ["快肥"],
   150: ["梦二"],
   151: ["梦梦"],
+  157: ["火爆兽"],
+  196: ["太阳精灵", "光伊布"],
+  197: ["月精灵", "黑伊布"],
+  212: ["钢铁螳螂"],
+  214: ["赫拉"],
+  242: ["快乐蛋"],
+  248: ["班吉拉", "班基拉"],
+  249: ["路基亚", "露琪亚"],
+  250: ["凤凰", "凤皇"],
+  251: ["雪拉比"],
+  258: ["水跳鱼"],
+  282: ["沙奈多", "超能女皇"],
+  287: ["懒人翁"],
+  289: ["懒惰王"],
+  306: ["波士多可拉"],
+  350: ["美丽龙", "米纳斯"],
+  373: ["血翼飞龙"],
+  376: ["合金十字"],
+  380: ["拉提亚斯", "拉迪亚斯"],
+  381: ["拉提欧斯", "拉迪欧斯"],
+  382: ["盖欧加", "海皇牙"],
+  383: ["古拉顿", "古拉多"],
+  384: ["裂空座", "裂空坐"],
+  385: ["吉拉祈"],
+  386: ["迪奥西斯", "代欧西奇斯"],
 };
 
 function getName(names, language) {
@@ -163,11 +191,79 @@ async function fetchSpecies(id) {
   };
 }
 
-const pokemon = [];
-
-for (let id = 1; id <= 151; id += 1) {
-  pokemon.push(await fetchSpecies(id));
+async function wait(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 }
+
+async function fetchWithRetry(url, retries = 4) {
+  let lastError;
+
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`Failed to fetch ${url}: ${response.status}`);
+      return response;
+    } catch (error) {
+      lastError = error;
+      await wait(600 * (attempt + 1));
+    }
+  }
+
+  throw lastError;
+}
+
+async function fileExists(path) {
+  try {
+    await stat(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function downloadArtwork(id, retries = 4) {
+  const target = `${ARTWORK_DIR}/${id}.png`;
+  if (await fileExists(target)) return;
+
+  let lastError;
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    try {
+      const response = await fetchWithRetry(
+        `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`,
+      );
+      const bytes = Buffer.from(await response.arrayBuffer());
+      await writeFile(target, bytes);
+      return;
+    } catch (error) {
+      lastError = error;
+      await wait(900 * (attempt + 1));
+    }
+  }
+
+  throw lastError;
+}
+
+async function runPool(ids, workerCount, worker) {
+  const results = [];
+  let nextIndex = 0;
+
+  async function runWorker() {
+    while (nextIndex < ids.length) {
+      const currentIndex = nextIndex;
+      nextIndex += 1;
+      results[currentIndex] = await worker(ids[currentIndex]);
+      console.log(`Fetched #${String(ids[currentIndex]).padStart(3, "0")}`);
+    }
+  }
+
+  await Promise.all(Array.from({ length: workerCount }, runWorker));
+  return results;
+}
+
+const ids = Array.from({ length: MAX_POKEMON }, (_, index) => index + 1);
+const pokemon = await runPool(ids, 6, fetchSpecies);
 
 const content = `export type Pokemon = {
   id: number;
@@ -179,9 +275,11 @@ const content = `export type Pokemon = {
 export const pokemonList: Pokemon[] = ${JSON.stringify(pokemon, null, 2)};
 
 export function artworkUrl(id: number) {
-  return \`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/\${id}.png\`;
+  return \`/pokemon-artwork/\${id}.png\`;
 }
 `;
 
+await mkdir(ARTWORK_DIR, { recursive: true });
 await writeFile("src/data/pokemon.ts", content);
+await runPool(ids, 4, downloadArtwork);
 console.log(`Wrote ${pokemon.length} Pokemon.`);

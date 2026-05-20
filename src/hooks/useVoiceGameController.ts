@@ -45,6 +45,12 @@ export function useVoiceGameController(game: PokemonGame, sfx: SfxController) {
     game.showDex();
   }
 
+  function resetToReadyFromGesture() {
+    cancelNarrationForNavigation();
+    setSpeechPaused(false);
+    game.resetToReady();
+  }
+
   function handleVoiceResult(texts: string | string[]) {
     const heardTexts = Array.isArray(texts) ? texts : [texts];
     const primaryText = heardTexts[0] || "";
@@ -63,9 +69,7 @@ export function useVoiceGameController(game: PokemonGame, sfx: SfxController) {
     }
 
     if (command === "restart") {
-      cancelNarrationForNavigation();
-      setSpeechPaused(false);
-      game.start();
+      resetToReadyFromGesture();
       return;
     }
 
@@ -141,7 +145,12 @@ export function useVoiceGameController(game: PokemonGame, sfx: SfxController) {
   function advanceFromGesture() {
     cancelNarrationForNavigation();
 
-    if (game.phase === "ready" || game.phase === "finished") {
+    if (game.phase === "finished") {
+      game.resetToReady();
+      return;
+    }
+
+    if (game.phase === "ready") {
       startGameFromGesture();
       return;
     }
@@ -231,6 +240,7 @@ export function useVoiceGameController(game: PokemonGame, sfx: SfxController) {
   return {
     advanceFromGesture,
     lastHeard,
+    resetToReadyFromGesture,
     speech,
     showDexFromGesture,
     startGameFromGesture,

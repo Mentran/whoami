@@ -1,4 +1,5 @@
 import { normalizeAnswer } from "../answerMatching.ts";
+import { pinyin } from "pinyin-pro";
 
 type ParsedSyllable = {
   final: string;
@@ -491,8 +492,12 @@ export function toPinyinSyllables(value: string) {
   const override = PHRASE_PINYIN_OVERRIDES[normalized];
   if (override) return override;
 
-  return Array.from(normalized)
-    .map((char) => PINYIN_BY_CHAR[char] || (/^[a-z0-9]+$/i.test(char) ? char.toLowerCase() : ""))
+  return (normalized.match(/\p{Script=Han}+|[a-z0-9]+/giu) || [])
+    .flatMap((token) => {
+      if (/^[a-z0-9]+$/i.test(token)) return [token.toLowerCase()];
+      return pinyin(token, { toneType: "none", type: "array" });
+    })
+    .map((syllable) => syllable.toLowerCase().replaceAll("ü", "v"))
     .filter(Boolean);
 }
 

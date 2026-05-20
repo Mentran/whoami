@@ -120,9 +120,21 @@ export default function App() {
             {sfx.muted ? "♪×" : "♪"}
           </button>
         }
+        utilityControl={
+          <button
+            className="reset-button"
+            disabled={game.phase === "ready"}
+            onClick={voice.resetToReadyFromGesture}
+            title="重新开始"
+            type="button"
+          >
+            重新开始
+          </button>
+        }
         status={game.status}
       >
         <GameScreen
+          best={game.best}
           difficulty={game.difficulty}
           pokemon={game.current}
           revealed={game.revealed}
@@ -130,6 +142,7 @@ export default function App() {
           hit={game.hit}
           phase={game.phase}
           onStart={voice.startGameFromGesture}
+          onRestart={voice.resetToReadyFromGesture}
           onShareResult={shareResult}
           roundLimit={game.roundLimit}
           roundSeconds={game.roundSeconds}

@@ -35,6 +35,17 @@ describe("voice answer correction", () => {
     assert.equal(correction.shouldRetry, false);
   });
 
+  it("supports common aliases from later generations", () => {
+    assert.equal(correctVoiceAnswer("路基亚", byName("洛奇亚"), pokemonList, "normal").correctedAnswer, "洛奇亚");
+    assert.equal(correctVoiceAnswer("雪拉比", byName("时拉比"), pokemonList, "normal").correctedAnswer, "时拉比");
+    assert.equal(correctVoiceAnswer("沙奈多", byName("沙奈朵"), pokemonList, "normal").correctedAnswer, "沙奈朵");
+    assert.equal(correctVoiceAnswer("裂空座", byName("烈空坐"), pokemonList, "normal").correctedAnswer, "烈空坐");
+    assert.equal(
+      correctVoiceAnswer("迪奥西斯", byName("代欧奇希斯"), pokemonList, "normal").correctedAnswer,
+      "代欧奇希斯",
+    );
+  });
+
   it("keeps hard mode aliases disabled", () => {
     const charizard = byName("喷火龙");
     const correction = correctVoiceAnswer("老喷", charizard, pokemonList, "hard");

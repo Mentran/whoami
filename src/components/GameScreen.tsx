@@ -6,6 +6,7 @@ import { difficultyLabels, getRating, getRatingText } from "../utils/result";
 
 type GameScreenProps = {
   difficulty: Difficulty;
+  best: number;
   pokemon: Pokemon;
   pokedexEntry: PokedexEntry;
   revealed: boolean;
@@ -13,6 +14,7 @@ type GameScreenProps = {
   hit: number;
   phase: Phase;
   onStart: () => void;
+  onRestart: () => void;
   onShareResult: () => void;
   roundLimit: number;
   roundSeconds: number;
@@ -24,6 +26,7 @@ type GameScreenProps = {
 };
 
 export function GameScreen({
+  best,
   difficulty,
   pokemon,
   pokedexEntry,
@@ -32,6 +35,7 @@ export function GameScreen({
   hit,
   phase,
   onStart,
+  onRestart,
   onShareResult,
   roundLimit,
   roundSeconds,
@@ -45,9 +49,12 @@ export function GameScreen({
   const isFinished = phase === "finished";
   const timeRatio = Math.max(0, Math.min(1, timeLeft / roundSeconds));
   const isTimeUrgent = phase === "playing" && timeLeft <= 3;
+  const shouldRevealArtwork = revealed && phase !== "entering" && phase !== "transitioning";
   const pokedexFacts = getPokedexFacts(pokedexEntry);
   const currentRoundNumber =
     phase === "correct" || phase === "skipped" || phase === "timeout" ? total : Math.min(total + 1, roundLimit);
+  const missed = roundLimit - hit;
+  const accuracy = Math.round((hit / roundLimit) * 100);
 
   return (
     <div className={`game-screen phase-${phase}`}>
@@ -75,18 +82,57 @@ export function GameScreen({
 
       {isFinished && (
         <div className="result-screen">
-          <span className="result-title">挑战完成</span>
-          <strong>
-            {hit}/{roundLimit}
-          </strong>
-          <span className="result-rating">{getRating(hit, roundLimit)}</span>
-          <span className="result-copy">{getRatingText(hit, roundLimit)}</span>
+          <div className="result-burst" aria-hidden="true" />
+          <div className="result-header">
+            <span className="result-kicker">CHALLENGE CLEAR</span>
+            <span className="result-title">挑战完成</span>
+            <span className="result-rating">{getRating(hit, roundLimit)}</span>
+            <span className="result-copy">{getRatingText(hit, roundLimit)}</span>
+          </div>
+          <div className="result-score-card">
+            <strong>
+              {hit}/{roundLimit}
+            </strong>
+            <span>命中率 {accuracy}%</span>
+          </div>
+          <div className="result-stats" aria-label="本局统计">
+            <span>
+              <b>{difficultyLabels[difficulty]}</b>
+              难度
+            </span>
+            <span>
+              <b>{missed}</b>
+              未命中
+            </span>
+            <span>
+              <b>{best}</b>
+              最高
+            </span>
+          </div>
+          <div className="result-difficulty">
+            <span>下一局难度</span>
+            <div className="difficulty-picker" aria-label="选择下一局难度">
+              {(["easy", "normal", "hard"] as Difficulty[]).map((mode) => (
+                <button
+                  className={mode === difficulty ? "active" : ""}
+                  key={mode}
+                  onClick={() => setDifficulty(mode)}
+                  type="button"
+                >
+                  {difficultyLabels[mode]}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="result-actions">
             <button className="share-action" onClick={onShareResult} type="button">
               分享结果
             </button>
             <button className="start-action" onClick={onStart} type="button">
               再来一局
+            </button>
+            <button className="result-secondary-action" onClick={onRestart} type="button">
+              重新选择
             </button>
           </div>
           {shareStatus && <span className="share-status">{shareStatus}</span>}
@@ -97,9 +143,10 @@ export function GameScreen({
         <>
           <div className="silhouette-card">
             <img
-              alt={revealed ? pokemon.zh : "神秘宝可梦黑影"}
-              className={revealed ? "pokemon-art revealed" : "pokemon-art hidden"}
+              alt={shouldRevealArtwork ? pokemon.zh : "神秘宝可梦黑影"}
+              className={shouldRevealArtwork ? "pokemon-art revealed" : "pokemon-art hidden"}
               draggable="false"
+              key={pokemon.id}
               src={artworkUrl(pokemon.id)}
             />
           </div>
@@ -112,7 +159,7 @@ export function GameScreen({
             <div className={isTimeUrgent ? "power-meter urgent" : "power-meter"} aria-label={`剩余 ${timeLeft} 秒`}>
               <span style={{ width: `${timeRatio * 100}%` }} />
             </div>
-            <p className={isTimeUrgent ? "timer-text urgent" : "timer-text"}>{timeLeft}s</p>
+            <p className={isTimeUrgent ? "timer-text urgent" : "timer-text"}>{timeLeft.toFixed(1)}s</p>
             <p className="feedback">{feedback}</p>
             {showDex && (
               <div className="pokedex-panel">

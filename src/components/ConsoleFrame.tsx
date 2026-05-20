@@ -6,9 +6,10 @@ type ConsoleFrameProps = {
   score: ReactNode;
   soundControl: ReactNode;
   status: string;
+  utilityControl?: ReactNode;
 };
 
-export function ConsoleFrame({ children, controls, score, soundControl, status }: ConsoleFrameProps) {
+export function ConsoleFrame({ children, controls, score, soundControl, status, utilityControl }: ConsoleFrameProps) {
   return (
     <section className="console" aria-label="我是谁游戏机">
       <div className="console-top">
@@ -16,7 +17,10 @@ export function ConsoleFrame({ children, controls, score, soundControl, status }
         <span className="led red" />
         <span className="led yellow" />
         <span className="led green" />
-        <div className="sound-control">{soundControl}</div>
+        <div className="utility-controls">
+          {utilityControl}
+          {soundControl}
+        </div>
       </div>
 
       <div className="screen-bezel">

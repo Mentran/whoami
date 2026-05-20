@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { getPokedexEntry } from "../data/pokedex";
 import type { Pokemon } from "../data/pokemon";
 import { getAcceptedAnswers, isCloseAnswer, normalizeAnswer } from "../utils/answerMatching";
+import { pickNextPokemon } from "../utils/roundSelection";
 
 export type Phase =
   | "ready"
@@ -19,26 +20,17 @@ const ENTERING_MS = 620;
 const TRANSITION_MS = 420;
 const ROUND_LIMIT = 10;
 const ROUND_SECONDS = 10;
-const EASY_POOL = new Set([
-  1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 16, 25, 26, 35, 36, 39, 52, 54, 58, 74, 79, 81, 92, 94, 95,
-  104, 113, 129, 130, 131, 133, 134, 135, 136, 143, 150, 151,
-]);
-const HARD_EXCLUDED_POOL = new Set([1, 4, 7, 25, 39, 52, 54, 129, 133, 143, 150, 151]);
-
-function pickNext(list: Pokemon[], previousId?: number) {
-  if (list.length === 1) return list[0];
-
-  let next = list[Math.floor(Math.random() * list.length)];
-  while (next.id === previousId) {
-    next = list[Math.floor(Math.random() * list.length)];
-  }
-  return next;
-}
+const FIRST_GENERATION_LIMIT = 151;
+const COUNTDOWN_TICK_MS = 80;
 
 function getPool(list: Pokemon[], difficulty: Difficulty) {
-  if (difficulty === "easy") return list.filter((pokemon) => EASY_POOL.has(pokemon.id));
-  if (difficulty === "hard") return list.filter((pokemon) => !HARD_EXCLUDED_POOL.has(pokemon.id));
+  if (difficulty === "easy") return list.filter((pokemon) => pokemon.id <= FIRST_GENERATION_LIMIT);
   return list;
+}
+
+function formatTimeLeft(seconds: number) {
+  if (seconds <= 0) return "0.0";
+  return seconds.toFixed(1);
 }
 
 function loadBest() {
@@ -48,7 +40,7 @@ function loadBest() {
 
 export function usePokemonGame(list: Pokemon[]) {
   const [difficulty, setDifficulty] = useState<Difficulty>("normal");
-  const [current, setCurrent] = useState(() => pickNext(list));
+  const [current, setCurrent] = useState(() => pickNextPokemon(list));
   const [answer, setAnswer] = useState("");
   const [dexVisible, setDexVisible] = useState(false);
   const [notice, setNotice] = useState("");
@@ -60,6 +52,7 @@ export function usePokemonGame(list: Pokemon[]) {
   const [best, setBest] = useState(loadBest);
   const phaseTimer = useRef<number | null>(null);
   const roundSettled = useRef(false);
+  const usedIds = useRef(new Set<number>());
 
   useEffect(() => {
     return () => {
@@ -70,21 +63,21 @@ export function usePokemonGame(list: Pokemon[]) {
   useEffect(() => {
     if (phase !== "playing") return undefined;
 
+    const startedAt = performance.now();
     setTimeLeft(ROUND_SECONDS);
     const countdownTimer = window.setInterval(() => {
-      setTimeLeft((currentTime) => {
-        if (currentTime <= 1) {
-          window.clearInterval(countdownTimer);
-          setNotice("");
-          setRevealed(true);
-          setPhase("timeout");
-          recordRound(false);
-          return 0;
-        }
+      const elapsed = (performance.now() - startedAt) / 1000;
+      const nextTimeLeft = Math.max(0, ROUND_SECONDS - elapsed);
+      setTimeLeft(nextTimeLeft);
 
-        return currentTime - 1;
-      });
-    }, 1000);
+      if (nextTimeLeft <= 0) {
+        window.clearInterval(countdownTimer);
+        setNotice("");
+        setRevealed(true);
+        setPhase("timeout");
+        recordRound(false);
+      }
+    }, COUNTDOWN_TICK_MS);
 
     return () => window.clearInterval(countdownTimer);
   }, [phase]);
@@ -99,7 +92,7 @@ export function usePokemonGame(list: Pokemon[]) {
 
   const status = useMemo(() => {
     if (phase === "ready") return "选择难度后，点击开始挑战";
-    if (phase === "finished") return "挑战完成，可以再来一局";
+    if (phase === "finished") return "挑战完成，可以选择难度再来一局";
     if (phase === "entering") return "正在载入剪影";
     if (phase === "transitioning") return "正在切换下一题";
     if (phase === "correct") return "答对了！可说：下一题 / 介绍一下";
@@ -107,7 +100,7 @@ export function usePokemonGame(list: Pokemon[]) {
     if (phase === "timeout") return `时间到，答案是 ${current.zh}；可说：下一题 / 介绍一下`;
     if (notice) return notice;
     if (dexVisible) return "图鉴资料显示中";
-    return `请说出宝可梦名字，还剩 ${timeLeft} 秒`;
+    return `请说出宝可梦名字，还剩 ${formatTimeLeft(timeLeft)} 秒`;
   }, [current.zh, dexVisible, notice, phase, timeLeft]);
 
   const feedback = useMemo(() => {
@@ -208,15 +201,37 @@ export function usePokemonGame(list: Pokemon[]) {
     recordRound(false);
   }
 
+  function selectNextRoundPokemon(previousId?: number) {
+    const nextPokemon = pickNextPokemon(pool, previousId, usedIds.current);
+    usedIds.current.add(nextPokemon.id);
+    return nextPokemon;
+  }
+
   function start() {
+    clearPhaseTimer();
+    usedIds.current = new Set();
     setAnswer("");
     setDexVisible(false);
     setNotice("");
     setHit(0);
     setTotal(0);
-    setCurrent((previous) => pickNext(pool, previous.id));
+    setCurrent(selectNextRoundPokemon(current.id));
     setRevealed(false);
     enterRound();
+  }
+
+  function resetToReady() {
+    clearPhaseTimer();
+    usedIds.current = new Set();
+    roundSettled.current = false;
+    setAnswer("");
+    setDexVisible(false);
+    setNotice("");
+    setHit(0);
+    setTotal(0);
+    setRevealed(false);
+    setTimeLeft(ROUND_SECONDS);
+    setPhase("ready");
   }
 
   function next() {
@@ -239,13 +254,13 @@ export function usePokemonGame(list: Pokemon[]) {
       return;
     }
 
-    setCurrent((previous) => pickNext(pool, previous.id));
     setAnswer("");
     setDexVisible(false);
     setNotice("");
     setRevealed(false);
     setTimeLeft(ROUND_SECONDS);
     setPhase("transitioning");
+    setCurrent(selectNextRoundPokemon(current.id));
     phaseTimer.current = window.setTimeout(() => {
       enterRound();
     }, TRANSITION_MS);
@@ -273,6 +288,7 @@ export function usePokemonGame(list: Pokemon[]) {
     pokedexEntry,
     revealed,
     roundLimit: ROUND_LIMIT,
+    resetToReady,
     setAnswer: updateAnswer,
     setDifficulty,
     showDex,
