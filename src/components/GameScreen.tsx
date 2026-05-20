@@ -82,7 +82,11 @@ export function GameScreen({
 
       {isFinished && (
         <div className="result-screen">
-          <div className="result-burst" aria-hidden="true" />
+          <div className="result-pixels" aria-hidden="true">
+            {Array.from({ length: 18 }, (_, index) => (
+              <span key={index} />
+            ))}
+          </div>
           <div className="result-header">
             <span className="result-kicker">CHALLENGE CLEAR</span>
             <span className="result-title">挑战完成</span>

@@ -1,17 +1,22 @@
-import { type FormEvent, useEffect, useRef, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { ConsoleFrame } from "./components/ConsoleFrame";
 import { GameScreen } from "./components/GameScreen";
+import { MusicControls } from "./components/MusicControls";
 import { ScoreDisplay } from "./components/ScoreDisplay";
 import { VoicePanel } from "./components/VoicePanel";
 import { pokemonList } from "./data/pokemon";
+import { useBgm } from "./hooks/useBgm";
 import { useSfx } from "./hooks/useSfx";
 import { usePokemonGame } from "./hooks/usePokemonGame";
 import { useVoiceGameController } from "./hooks/useVoiceGameController";
 import { createResultText } from "./utils/result";
+import { createShareResultImage } from "./utils/shareResultImage";
 
 export default function App() {
   const game = usePokemonGame(pokemonList);
   const sfx = useSfx();
+  const bgm = useBgm();
+  const { activateFromGesture: activateBgmFromGesture, setActive: setBgmActive, setDucking: setBgmDucking, setTrack: setBgmTrack } = bgm;
   const voice = useVoiceGameController(game, sfx);
   const previousPhase = useRef(game.phase);
   const [textAnswer, setTextAnswer] = useState("");
@@ -19,13 +24,29 @@ export default function App() {
   const isRoundOver = game.phase === "correct" || game.phase === "skipped" || game.phase === "timeout";
   const canUseTextInput = game.phase === "playing" || isRoundOver;
 
+  const enableBgmFromGesture = useCallback(() => {
+    if (localStorage.getItem("who-am-i-bgm-enabled") !== "false") {
+      activateBgmFromGesture();
+    }
+  }, [activateBgmFromGesture]);
+
+  const startGameFromGesture = useCallback(() => {
+    enableBgmFromGesture();
+    voice.startGameFromGesture();
+  }, [enableBgmFromGesture, voice]);
+
+  const advanceFromGesture = useCallback(() => {
+    if (game.phase === "ready") enableBgmFromGesture();
+    voice.advanceFromGesture();
+  }, [enableBgmFromGesture, game.phase, voice]);
+
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       const target = event.target as HTMLElement | null;
       const isTyping = target?.tagName === "INPUT" || target?.tagName === "TEXTAREA";
 
       if (event.key === "Enter" && !isTyping) {
-        voice.advanceFromGesture();
+        advanceFromGesture();
       }
 
       if (event.key === "Escape") {
@@ -35,7 +56,7 @@ export default function App() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [game, voice]);
+  }, [advanceFromGesture, game]);
 
   useEffect(() => {
     if (previousPhase.current === game.phase) return;
@@ -55,6 +76,23 @@ export default function App() {
     }
   }, [game.phase, shareStatus]);
 
+  useEffect(() => {
+    setBgmDucking(voice.speech.listening || voice.tts.speaking);
+  }, [setBgmDucking, voice.speech.listening, voice.tts.speaking]);
+
+  useEffect(() => {
+    setBgmActive(game.phase === "ready" || game.phase === "finished");
+  }, [game.phase, setBgmActive]);
+
+  useEffect(() => {
+    if (game.phase === "finished") {
+      setBgmTrack(4);
+      return;
+    }
+
+    if (game.phase === "ready") setBgmTrack(0);
+  }, [game.phase, setBgmTrack]);
+
   function handleTextSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!textAnswer.trim() || !canUseTextInput) return;
@@ -64,28 +102,47 @@ export default function App() {
 
   async function shareResult() {
     const text = createResultText(game.hit, game.roundLimit, game.difficulty);
-    const shareData = {
-      text,
-      title: "我是谁？",
-      url: window.location.href,
-    };
+    setShareStatus("正在生成分享图...");
 
     try {
-      if (navigator.share) {
+      const image = await createShareResultImage({
+        best: game.best,
+        difficulty: game.difficulty,
+        hit: game.hit,
+        roundLimit: game.roundLimit,
+      });
+      const shareData = {
+        files: [image.file],
+        text,
+        title: "我是谁？",
+      };
+
+      if (navigator.canShare?.(shareData) && navigator.share) {
         await navigator.share(shareData);
-        setShareStatus("已打开系统分享");
+        URL.revokeObjectURL(image.url);
+        setShareStatus("已打开图片分享");
         return;
       }
 
-      await navigator.clipboard.writeText(`${text} ${window.location.href}`);
-      setShareStatus("结果已复制");
+      const link = document.createElement("a");
+      link.download = "who-am-i-result.png";
+      link.href = image.url;
+      link.click();
+      window.setTimeout(() => URL.revokeObjectURL(image.url), 1000);
+
+      try {
+        await navigator.clipboard.writeText(`${text} ${window.location.href}`);
+        setShareStatus("已生成图片，并复制文字结果");
+      } catch {
+        setShareStatus("已生成图片");
+      }
     } catch {
       setShareStatus("分享失败，请稍后再试");
     }
   }
 
   return (
-    <main className="app-shell">
+    <main className="app-shell" onPointerDown={enableBgmFromGesture}>
       <ConsoleFrame
         controls={
           <>
@@ -101,7 +158,7 @@ export default function App() {
             <button
               className="round-button primary"
               disabled={!game.canAdvance}
-              onClick={voice.advanceFromGesture}
+              onClick={advanceFromGesture}
               title="开始 / 下一步"
               type="button"
             >
@@ -121,15 +178,26 @@ export default function App() {
           </button>
         }
         utilityControl={
-          <button
-            className="reset-button"
-            disabled={game.phase === "ready"}
-            onClick={voice.resetToReadyFromGesture}
-            title="重新开始"
-            type="button"
-          >
-            重新开始
-          </button>
+          <>
+            <MusicControls
+              enabled={bgm.enabled}
+              onNext={bgm.nextTrack}
+              onPrevious={bgm.previousTrack}
+              onToggle={bgm.toggle}
+              onVolumeChange={bgm.setVolume}
+              track={bgm.track}
+              volume={bgm.volume}
+            />
+            <button
+              className="reset-button"
+              disabled={game.phase === "ready"}
+              onClick={voice.resetToReadyFromGesture}
+              title="重新开始"
+              type="button"
+            >
+              重新开始
+            </button>
+          </>
         }
         status={game.status}
       >
@@ -141,7 +209,7 @@ export default function App() {
           feedback={game.feedback}
           hit={game.hit}
           phase={game.phase}
-          onStart={voice.startGameFromGesture}
+          onStart={startGameFromGesture}
           onRestart={voice.resetToReadyFromGesture}
           onShareResult={shareResult}
           roundLimit={game.roundLimit}
