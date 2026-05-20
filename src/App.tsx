@@ -14,8 +14,10 @@ export default function App() {
   const sfx = useSfx();
   const voice = useVoiceGameController(game, sfx);
   const previousPhase = useRef(game.phase);
-  const [debugAnswer, setDebugAnswer] = useState("");
+  const [textAnswer, setTextAnswer] = useState("");
   const [shareStatus, setShareStatus] = useState("");
+  const isRoundOver = game.phase === "correct" || game.phase === "skipped" || game.phase === "timeout";
+  const canUseTextInput = game.phase === "playing" || isRoundOver;
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -53,11 +55,11 @@ export default function App() {
     }
   }, [game.phase, shareStatus]);
 
-  function handleDebugSubmit(event: FormEvent<HTMLFormElement>) {
+  function handleTextSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!debugAnswer.trim()) return;
-    voice.submitDebugAnswer(debugAnswer);
-    setDebugAnswer("");
+    if (!textAnswer.trim() || !canUseTextInput) return;
+    voice.submitTextInput(textAnswer);
+    setTextAnswer("");
   }
 
   async function shareResult() {
@@ -139,25 +141,41 @@ export default function App() {
           showDex={game.dexVisible}
         />
         <VoicePanel
+          activated={voice.speech.activated}
           error={voice.speech.error}
           interimText={voice.speech.interimText}
-          lastHeard={voice.tts.error || voice.lastHeard}
+          lastHeard={voice.ttsMessage || voice.lastHeard}
           listening={voice.speech.listening || voice.tts.speaking}
           phaseLabel={game.status}
+          permissionState={voice.speech.permissionState}
           supported={voice.speech.supported}
           title={voice.voicePanelTitle}
         />
+        <form className="answer-panel" onSubmit={handleTextSubmit}>
+          <input
+            aria-label="文字答题"
+            disabled={!canUseTextInput}
+            onChange={(event) => setTextAnswer(event.target.value)}
+            placeholder={isRoundOver ? "可输入：下一题 / 介绍一下" : "麦克风不可用时，在这里输入答案"}
+            type="text"
+            value={textAnswer}
+          />
+          <button disabled={!canUseTextInput} type="submit">
+            发送
+          </button>
+          {isRoundOver && (
+            <button className="answer-panel-secondary" onClick={voice.advanceFromGesture} type="button">
+              下一题
+            </button>
+          )}
+          {isRoundOver && !game.dexVisible && (
+            <button className="answer-panel-secondary" onClick={voice.showDexFromGesture} type="button">
+              介绍一下
+            </button>
+          )}
+        </form>
         {import.meta.env.DEV && (
-          <form className="debug-answer" onSubmit={handleDebugSubmit}>
-            <input
-              aria-label="开发调试答案"
-              onChange={(event) => setDebugAnswer(event.target.value)}
-              placeholder="开发调试：输入答案或指令"
-              type="text"
-              value={debugAnswer}
-            />
-            <button type="submit">发送</button>
-          </form>
+          <p className="debug-note">开发模式：文字框也可输入语音指令进行调试。</p>
         )}
       </ConsoleFrame>
     </main>

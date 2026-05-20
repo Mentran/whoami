@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-type SpeechRecognitionResultHandler = (text: string) => void;
+type SpeechRecognitionResultHandler = (texts: string[]) => void;
 
 type BrowserSpeechRecognitionEvent = Event & {
   resultIndex: number;
@@ -22,6 +22,7 @@ type BrowserSpeechRecognition = EventTarget & {
   onend: (() => void) | null;
   onerror: ((event: BrowserSpeechRecognitionErrorEvent) => void) | null;
   onresult: ((event: BrowserSpeechRecognitionEvent) => void) | null;
+  onstart: (() => void) | null;
 };
 
 type BrowserSpeechRecognitionConstructor = new () => BrowserSpeechRecognition;
@@ -45,6 +46,16 @@ function getSpeechErrorMessage(error: string) {
   return "语音识别失败";
 }
 
+function getMediaErrorMessage(error: unknown) {
+  if (error instanceof DOMException) {
+    if (error.name === "NotAllowedError" || error.name === "SecurityError") return "麦克风权限被拒绝";
+    if (error.name === "NotFoundError" || error.name === "DevicesNotFoundError") return "没有可用麦克风";
+    if (error.name === "NotReadableError" || error.name === "TrackStartError") return "麦克风被其他应用占用";
+  }
+
+  return "麦克风启动失败";
+}
+
 export function useSpeechInput(onResult: SpeechRecognitionResultHandler) {
   const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
   const onResultRef = useRef(onResult);
@@ -52,6 +63,8 @@ export function useSpeechInput(onResult: SpeechRecognitionResultHandler) {
   const [interimText, setInterimText] = useState("");
   const [listening, setListening] = useState(false);
   const [blocked, setBlocked] = useState(false);
+  const [activated, setActivated] = useState(false);
+  const [permissionState, setPermissionState] = useState<PermissionState>("prompt");
   const [session, setSession] = useState(0);
   const supported = useMemo(() => Boolean(getSpeechRecognition()), []);
 
@@ -65,17 +78,81 @@ export function useSpeechInput(onResult: SpeechRecognitionResultHandler) {
     };
   }, []);
 
+  useEffect(() => {
+    if (!navigator.permissions?.query) return undefined;
+
+    let permissionStatus: PermissionStatus | null = null;
+
+    navigator.permissions
+      .query({ name: "microphone" as PermissionName })
+      .then((status) => {
+        permissionStatus = status;
+        setPermissionState(status.state);
+
+        if (status.state === "denied") {
+          setBlocked(true);
+          setError("麦克风权限被拒绝");
+        }
+
+        status.onchange = () => {
+          setPermissionState(status.state);
+
+          if (status.state === "denied") {
+            setBlocked(true);
+            setError("麦克风权限被拒绝");
+            return;
+          }
+
+          setBlocked(false);
+          setError((current) => (current === "麦克风权限被拒绝" ? "" : current));
+        };
+      })
+      .catch(() => undefined);
+
+    return () => {
+      if (permissionStatus) permissionStatus.onchange = null;
+    };
+  }, []);
+
   const stop = useCallback(() => {
     recognitionRef.current?.stop();
     setListening(false);
     setSession((current) => current + 1);
   }, []);
 
-  const start = useCallback(() => {
+  const requestMicrophoneAccess = useCallback(async () => {
+    if (!navigator.mediaDevices?.getUserMedia) return true;
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((track) => track.stop());
+      setPermissionState("granted");
+      setBlocked(false);
+      setError("");
+      return true;
+    } catch (error) {
+      const message = getMediaErrorMessage(error);
+      setError(message);
+      setBlocked(message === "麦克风权限被拒绝");
+      if (message === "麦克风权限被拒绝") setPermissionState("denied");
+      setListening(false);
+      setSession((current) => current + 1);
+      return false;
+    }
+  }, []);
+
+  const start = useCallback(async () => {
     const SpeechRecognition = getSpeechRecognition();
     if (!SpeechRecognition) {
       setError("当前浏览器不支持语音输入");
       return;
+    }
+
+    setActivated(true);
+
+    if (permissionState !== "granted") {
+      const allowed = await requestMicrophoneAccess();
+      if (!allowed) return;
     }
 
     recognitionRef.current?.abort();
@@ -84,7 +161,7 @@ export function useSpeechInput(onResult: SpeechRecognitionResultHandler) {
     recognition.lang = "zh-CN";
     recognition.continuous = false;
     recognition.interimResults = true;
-    recognition.maxAlternatives = 1;
+    recognition.maxAlternatives = 5;
     recognitionRef.current = recognition;
 
     setError("");
@@ -100,8 +177,12 @@ export function useSpeechInput(onResult: SpeechRecognitionResultHandler) {
         const transcript = result[0]?.transcript.trim() || "";
 
         if (result.isFinal) {
+          const alternatives = Array.from({ length: result.length }, (_, alternativeIndex) => {
+            return result[alternativeIndex]?.transcript.trim() || "";
+          }).filter(Boolean);
+
           setInterimText("");
-          onResultRef.current(transcript);
+          onResultRef.current(alternatives.length ? alternatives : [transcript]);
           recognition.stop();
           return;
         }
@@ -112,9 +193,16 @@ export function useSpeechInput(onResult: SpeechRecognitionResultHandler) {
       setInterimText(interim);
     };
 
+    recognition.onstart = () => {
+      setPermissionState("granted");
+    };
+
     recognition.onerror = (event) => {
       setError(getSpeechErrorMessage(event.error));
-      if (event.error === "not-allowed" || event.error === "service-not-allowed") setBlocked(true);
+      if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+        setBlocked(true);
+        setPermissionState("denied");
+      }
       setListening(false);
       setSession((current) => current + 1);
     };
@@ -131,19 +219,21 @@ export function useSpeechInput(onResult: SpeechRecognitionResultHandler) {
       setListening(false);
       setSession((current) => current + 1);
     }
-  }, []);
+  }, [permissionState, requestMicrophoneAccess]);
 
   return useMemo(
     () => ({
-      canAutoRestart: supported && !blocked,
+      activated,
+      canAutoRestart: supported && activated && !blocked && permissionState !== "denied",
       error,
       interimText,
       listening,
+      permissionState,
       session,
       start,
       stop,
       supported,
     }),
-    [blocked, error, interimText, listening, session, start, stop, supported],
+    [activated, blocked, error, interimText, listening, permissionState, session, start, stop, supported],
   );
 }

@@ -13,6 +13,7 @@
 - 黑影猜谜 + 10 秒倒计时
 - 中文名 / 英文名 / 常见别名判定
 - 语音答题：猜错可继续，超时 / 跳过后揭晓答案
+- 文字答题兜底：麦克风不可用时也能完成挑战
 - 语音指令：下一题、跳过、介绍一下、重新开始、静音、打开声音
 - “我是谁”小百科：本题结束后可语音触发，浏览器 TTS 自动朗读
 - HIT / TOT 计分、10 题挑战和本地最高分
@@ -24,7 +25,7 @@
 - React
 - TypeScript
 - 原生 CSS
-- 本地题库 + PokeAPI official artwork 图片 URL
+- 本地题库 + 本地缓存的 PokeAPI official artwork 图片
 - Web Speech API 语音识别
 - speechSynthesis 语音合成
 - `localStorage` 保存最高分
@@ -33,10 +34,10 @@
 
 ```bash
 npm install
-npm run dev -- --host 127.0.0.1 --port 5174
+npm run dev -- --host 127.0.0.1 --port 5175
 ```
 
-访问 `http://127.0.0.1:5174/`，点击“开始挑战”后允许麦克风权限。
+访问 `http://127.0.0.1:5175/`，点击“开始挑战”后允许麦克风权限。
 
 ## 验证
 

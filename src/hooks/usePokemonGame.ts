@@ -233,19 +233,20 @@ export function usePokemonGame(list: Pokemon[]) {
     }
 
     clearPhaseTimer();
+
+    if (total >= ROUND_LIMIT) {
+      setPhase("finished");
+      return;
+    }
+
+    setCurrent((previous) => pickNext(pool, previous.id));
+    setAnswer("");
+    setDexVisible(false);
+    setNotice("");
+    setRevealed(false);
+    setTimeLeft(ROUND_SECONDS);
     setPhase("transitioning");
     phaseTimer.current = window.setTimeout(() => {
-      if (total >= ROUND_LIMIT) {
-        setPhase("finished");
-        phaseTimer.current = null;
-        return;
-      }
-
-      setCurrent((previous) => pickNext(pool, previous.id));
-      setAnswer("");
-      setDexVisible(false);
-      setNotice("");
-      setRevealed(false);
       enterRound();
     }, TRANSITION_MS);
   }

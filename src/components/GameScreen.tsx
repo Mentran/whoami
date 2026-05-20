@@ -1,6 +1,7 @@
 import { artworkUrl, type Pokemon } from "../data/pokemon";
 import type { PokedexEntry } from "../data/pokedex";
 import type { Difficulty, Phase } from "../hooks/usePokemonGame";
+import { getPokedexFacts } from "../utils/pokedexText";
 import { difficultyLabels, getRating, getRatingText } from "../utils/result";
 
 type GameScreenProps = {
@@ -44,6 +45,9 @@ export function GameScreen({
   const isFinished = phase === "finished";
   const timeRatio = Math.max(0, Math.min(1, timeLeft / roundSeconds));
   const isTimeUrgent = phase === "playing" && timeLeft <= 3;
+  const pokedexFacts = getPokedexFacts(pokedexEntry);
+  const currentRoundNumber =
+    phase === "correct" || phase === "skipped" || phase === "timeout" ? total : Math.min(total + 1, roundLimit);
 
   return (
     <div className={`game-screen phase-${phase}`}>
@@ -102,7 +106,7 @@ export function GameScreen({
 
           <div className="prompt-panel">
             <p className="round-count">
-              第 {Math.min(total + 1, roundLimit)} / {roundLimit} 题
+              第 {currentRoundNumber} / {roundLimit} 题
             </p>
             <p className="question">{revealed ? "就是它！" : "我是谁？"}</p>
             <div className={isTimeUrgent ? "power-meter urgent" : "power-meter"} aria-label={`剩余 ${timeLeft} 秒`}>
@@ -116,8 +120,10 @@ export function GameScreen({
                   #{String(pokemon.id).padStart(3, "0")} {pokemon.zh}
                 </strong>
                 <span>{pokedexEntry.types.join(" / ")}</span>
-                <p>{pokedexEntry.intro}</p>
-                <small>{pokedexEntry.trivia}</small>
+                {pokedexFacts[0] && <p>{pokedexFacts[0]}</p>}
+                {pokedexFacts.slice(1).map((fact) => (
+                  <small key={fact}>{fact}</small>
+                ))}
               </div>
             )}
             <p className="brand">
