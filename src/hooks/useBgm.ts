@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-const BGM_ENABLED_KEY = "who-am-i-bgm-enabled";
 const BGM_VOLUME_KEY = "who-am-i-bgm-volume";
 const BGM_TRACK_KEY = "who-am-i-bgm-track";
 
@@ -16,6 +15,11 @@ export type BgmTrack = {
   lead: BgmNote[];
   name: string;
   tempo: number;
+};
+
+type ScheduledBgmNote = {
+  gain: GainNode;
+  oscillator: OscillatorNode;
 };
 
 declare global {
@@ -158,10 +162,6 @@ export const bgmTracks: BgmTrack[] = [
   },
 ];
 
-function loadEnabled() {
-  return localStorage.getItem(BGM_ENABLED_KEY) !== "false";
-}
-
 function loadVolume() {
   const stored = Number(localStorage.getItem(BGM_VOLUME_KEY));
   return Number.isFinite(stored) ? Math.min(1, Math.max(0, stored)) : 0.42;
@@ -186,9 +186,11 @@ function scheduleNote(
   beatLength: number,
   wave: OscillatorType,
   baseGain: number,
+  scheduledNotes: Set<ScheduledBgmNote>,
 ) {
   const oscillator = context.createOscillator();
   const gain = context.createGain();
+  const scheduledNote = { gain, oscillator };
   const start = startAt + note.beat * beatLength;
   const duration = note.duration * beatLength;
   const peak = baseGain * (note.gain ?? 1);
@@ -201,12 +203,18 @@ function scheduleNote(
 
   oscillator.connect(gain);
   gain.connect(output);
+  scheduledNotes.add(scheduledNote);
+  oscillator.onended = () => {
+    oscillator.disconnect();
+    gain.disconnect();
+    scheduledNotes.delete(scheduledNote);
+  };
   oscillator.start(start);
   oscillator.stop(start + duration + 0.04);
 }
 
 export function useBgm() {
-  const [enabled, setEnabled] = useState(loadEnabled);
+  const [enabled, setEnabled] = useState(false);
   const [active, setActive] = useState(false);
   const [trackIndex, setTrackIndex] = useState(loadTrackIndex);
   const [volume, setVolumeState] = useState(loadVolume);
@@ -215,6 +223,7 @@ export function useBgm() {
   const gainRef = useRef<GainNode | null>(null);
   const timerRef = useRef<number | null>(null);
   const startedAtRef = useRef(0);
+  const scheduledNotesRef = useRef(new Set<ScheduledBgmNote>());
   const unlockedRef = useRef(false);
 
   const track = bgmTracks[trackIndex];
@@ -225,6 +234,26 @@ export function useBgm() {
       timerRef.current = null;
     }
   }, []);
+
+  const stopScheduledNotes = useCallback(() => {
+    for (const note of scheduledNotesRef.current) {
+      note.oscillator.onended = null;
+      try {
+        note.oscillator.stop();
+      } catch {
+        // The oscillator may have already ended before a track switch.
+      }
+      note.oscillator.disconnect();
+      note.gain.disconnect();
+    }
+
+    scheduledNotesRef.current.clear();
+  }, []);
+
+  const stopPlayback = useCallback(() => {
+    stopLoop();
+    stopScheduledNotes();
+  }, [stopLoop, stopScheduledNotes]);
 
   const ensureAudio = useCallback(() => {
     if (!contextRef.current) {
@@ -255,11 +284,11 @@ export function useBgm() {
     const startAt = Math.max(context.currentTime + 0.04, startedAtRef.current || context.currentTime + 0.04);
 
     for (const note of currentTrack.bass) {
-      scheduleNote(context, output, note, startAt, beatLength, "triangle", 0.018);
+      scheduleNote(context, output, note, startAt, beatLength, "triangle", 0.018, scheduledNotesRef.current);
     }
 
     for (const note of currentTrack.lead) {
-      scheduleNote(context, output, note, startAt, beatLength, "square", 0.022);
+      scheduleNote(context, output, note, startAt, beatLength, "square", 0.022, scheduledNotesRef.current);
     }
 
     startedAtRef.current = startAt + loopDuration;
@@ -268,22 +297,21 @@ export function useBgm() {
 
   useEffect(() => {
     if (!enabled || !active || !unlockedRef.current) {
-      stopLoop();
+      stopPlayback();
       return;
     }
 
     try {
       ensureAudio();
       startedAtRef.current = 0;
-      stopLoop();
+      stopPlayback();
       scheduleTrack();
     } catch {
       setEnabled(false);
-      localStorage.setItem(BGM_ENABLED_KEY, "false");
     }
 
-    return stopLoop;
-  }, [active, enabled, ensureAudio, scheduleTrack, stopLoop, trackIndex]);
+    return stopPlayback;
+  }, [active, enabled, ensureAudio, scheduleTrack, stopPlayback, trackIndex]);
 
   useEffect(() => {
     const gain = gainRef.current;
@@ -297,10 +325,10 @@ export function useBgm() {
 
   useEffect(() => {
     return () => {
-      stopLoop();
+      stopPlayback();
       void contextRef.current?.close();
     };
-  }, [stopLoop]);
+  }, [stopPlayback]);
 
   const setEnabledValue = useCallback(
     (next: boolean) => {
@@ -309,7 +337,6 @@ export function useBgm() {
         ensureAudio();
       }
       setEnabled(next);
-      localStorage.setItem(BGM_ENABLED_KEY, String(next));
     },
     [ensureAudio],
   );
@@ -326,8 +353,13 @@ export function useBgm() {
   }, [active, enabled, ensureAudio, scheduleTrack, stopLoop]);
 
   const toggle = useCallback(() => {
+    if (enabled && !unlockedRef.current) {
+      activateFromGesture();
+      return;
+    }
+
     setEnabledValue(!enabled);
-  }, [enabled, setEnabledValue]);
+  }, [activateFromGesture, enabled, setEnabledValue]);
 
   const setVolume = useCallback((next: number) => {
     const normalized = Math.min(1, Math.max(0, next));
@@ -344,10 +376,10 @@ export function useBgm() {
       localStorage.setItem(BGM_TRACK_KEY, String(next));
       if (enabled) {
         startedAtRef.current = 0;
-        stopLoop();
+        stopPlayback();
       }
     },
-    [enabled, stopLoop, trackIndex],
+    [enabled, stopPlayback, trackIndex],
   );
 
   const nextTrack = useCallback(() => setTrack(trackIndex + 1), [setTrack, trackIndex]);

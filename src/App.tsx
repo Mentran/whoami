@@ -19,15 +19,14 @@ export default function App() {
   const { activateFromGesture: activateBgmFromGesture, setActive: setBgmActive, setDucking: setBgmDucking, setTrack: setBgmTrack } = bgm;
   const voice = useVoiceGameController(game, sfx);
   const previousPhase = useRef(game.phase);
+  const previousBgmPhase = useRef(game.phase);
   const [textAnswer, setTextAnswer] = useState("");
   const [shareStatus, setShareStatus] = useState("");
   const isRoundOver = game.phase === "correct" || game.phase === "skipped" || game.phase === "timeout";
   const canUseTextInput = game.phase === "playing" || isRoundOver;
 
   const enableBgmFromGesture = useCallback(() => {
-    if (localStorage.getItem("who-am-i-bgm-enabled") !== "false") {
-      activateBgmFromGesture();
-    }
+    activateBgmFromGesture();
   }, [activateBgmFromGesture]);
 
   const startGameFromGesture = useCallback(() => {
@@ -85,6 +84,9 @@ export default function App() {
   }, [game.phase, setBgmActive]);
 
   useEffect(() => {
+    if (previousBgmPhase.current === game.phase) return;
+
+    previousBgmPhase.current = game.phase;
     if (game.phase === "finished") {
       setBgmTrack(4);
       return;

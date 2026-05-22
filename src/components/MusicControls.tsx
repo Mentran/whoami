@@ -21,13 +21,20 @@ export function MusicControls({
 }: MusicControlsProps) {
   return (
     <div className="music-controls" aria-label="背景音乐控制">
-      <button aria-label="上一首背景音乐" disabled={!enabled} onClick={onPrevious} type="button">
+      <button aria-label="上一首背景音乐" disabled={!enabled} onClick={onPrevious} title="上一首背景音乐" type="button">
         ◀
       </button>
-      <button aria-label={enabled ? "关闭背景音乐" : "开启背景音乐"} className="music-toggle" onClick={onToggle} type="button">
+      <button
+        aria-label={enabled ? "关闭背景音乐" : "开启背景音乐"}
+        className="music-toggle"
+        onClick={onToggle}
+        onPointerDown={(event) => event.stopPropagation()}
+        title={enabled ? "关闭背景音乐" : "开启背景音乐"}
+        type="button"
+      >
         {enabled ? "BGM" : "BGM×"}
       </button>
-      <button aria-label="下一首背景音乐" disabled={!enabled} onClick={onNext} type="button">
+      <button aria-label="下一首背景音乐" disabled={!enabled} onClick={onNext} title="下一首背景音乐" type="button">
         ▶
       </button>
       <span title={track.name}>{track.name}</span>
