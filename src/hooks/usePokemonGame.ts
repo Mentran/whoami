@@ -2,7 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { getPokedexEntry } from "../data/pokedex";
 import type { Pokemon } from "../data/pokemon";
 import { getAcceptedAnswers, isCloseAnswer, normalizeAnswer } from "../utils/answerMatching";
+import { recordPokemonRound, type PokemonRoundOutcome } from "../utils/pokemonProgress";
 import { pickNextPokemon } from "../utils/roundSelection";
+import { getNextStreak } from "../utils/streak";
 
 export type Phase =
   | "ready"
@@ -49,6 +51,8 @@ export function usePokemonGame(list: Pokemon[]) {
   const [timeLeft, setTimeLeft] = useState(ROUND_SECONDS);
   const [hit, setHit] = useState(0);
   const [total, setTotal] = useState(0);
+  const [streak, setStreak] = useState(0);
+  const [longestStreak, setLongestStreak] = useState(0);
   const [best, setBest] = useState(loadBest);
   const phaseTimer = useRef<number | null>(null);
   const roundSettled = useRef(false);
@@ -75,7 +79,7 @@ export function usePokemonGame(list: Pokemon[]) {
         setNotice("");
         setRevealed(true);
         setPhase("timeout");
-        recordRound(false);
+        recordRound("timeout");
       }
     }, COUNTDOWN_TICK_MS);
 
@@ -92,20 +96,23 @@ export function usePokemonGame(list: Pokemon[]) {
 
   const status = useMemo(() => {
     if (phase === "ready") return "选择难度后，点击开始挑战";
-    if (phase === "finished") return "挑战完成，可以选择难度再来一局";
+    if (phase === "finished") return "挑战完成，可以再来一局或换个难度";
     if (phase === "entering") return "正在载入剪影";
     if (phase === "transitioning") return "正在切换下一题";
-    if (phase === "correct") return "答对了！可说：下一题 / 介绍一下";
+    if (phase === "correct") {
+      const streakText = streak >= 2 ? `，${streak} 连击` : "";
+      return `答对了${streakText}！可说：下一题 / 介绍一下`;
+    }
     if (phase === "skipped") return `已跳过，答案是 ${current.zh}；可说：下一题 / 介绍一下`;
     if (phase === "timeout") return `时间到，答案是 ${current.zh}；可说：下一题 / 介绍一下`;
     if (notice) return notice;
     if (dexVisible) return "图鉴资料显示中";
     return `请说出宝可梦名字，还剩 ${formatTimeLeft(timeLeft)} 秒`;
-  }, [current.zh, dexVisible, notice, phase, timeLeft]);
+  }, [current.zh, dexVisible, notice, phase, streak, timeLeft]);
 
   const feedback = useMemo(() => {
     if (phase === "ready") return "准备开始";
-    if (phase === "finished") return `命中 ${hit}/${ROUND_LIMIT}`;
+    if (phase === "finished") return `命中 ${hit}/${ROUND_LIMIT}，最长连击 ${longestStreak}`;
     if (phase === "entering") return "剪影出现中";
     if (phase === "transitioning") return "下一题马上来";
     if (phase === "correct") return `${current.zh} / ${current.en}`;
@@ -114,7 +121,7 @@ export function usePokemonGame(list: Pokemon[]) {
     if (dexVisible) return `${pokedexEntry.category} / ${pokedexEntry.types.join("·")}`;
     if (notice) return notice;
     return "我是谁？";
-  }, [current, dexVisible, hit, notice, phase, pokedexEntry]);
+  }, [current, dexVisible, hit, longestStreak, notice, phase, pokedexEntry]);
 
   function updateAnswer(value: string) {
     setAnswer(value);
@@ -143,14 +150,19 @@ export function usePokemonGame(list: Pokemon[]) {
     }, ENTERING_MS);
   }
 
-  function recordRound(isHit: boolean) {
+  function recordRound(outcome: PokemonRoundOutcome) {
     if (roundSettled.current) return;
 
     roundSettled.current = true;
+    const isHit = outcome === "hit";
     const nextTotal = total + 1;
     const nextHit = hit + (isHit ? 1 : 0);
+    const nextStreak = getNextStreak(streak, isHit);
     setTotal(nextTotal);
     setHit(nextHit);
+    setStreak(nextStreak);
+    setLongestStreak((currentLongestStreak) => Math.max(currentLongestStreak, nextStreak));
+    recordPokemonRound(current.id, outcome);
 
     if (nextHit > best) {
       setBest(nextHit);
@@ -180,7 +192,7 @@ export function usePokemonGame(list: Pokemon[]) {
 
     setRevealed(true);
     setPhase("correct");
-    recordRound(true);
+    recordRound("hit");
     return "correct";
   }
 
@@ -198,7 +210,7 @@ export function usePokemonGame(list: Pokemon[]) {
     setRevealed(true);
     setDexVisible(false);
     setPhase("skipped");
-    recordRound(false);
+    recordRound("skip");
   }
 
   function selectNextRoundPokemon(previousId?: number) {
@@ -215,6 +227,8 @@ export function usePokemonGame(list: Pokemon[]) {
     setNotice("");
     setHit(0);
     setTotal(0);
+    setStreak(0);
+    setLongestStreak(0);
     setCurrent(selectNextRoundPokemon(current.id));
     setRevealed(false);
     enterRound();
@@ -229,6 +243,8 @@ export function usePokemonGame(list: Pokemon[]) {
     setNotice("");
     setHit(0);
     setTotal(0);
+    setStreak(0);
+    setLongestStreak(0);
     setRevealed(false);
     setTimeLeft(ROUND_SECONDS);
     setPhase("ready");
@@ -283,6 +299,7 @@ export function usePokemonGame(list: Pokemon[]) {
     dexVisible,
     feedback,
     hit,
+    longestStreak,
     next,
     phase,
     pokedexEntry,
@@ -295,6 +312,7 @@ export function usePokemonGame(list: Pokemon[]) {
     skip,
     start,
     status,
+    streak,
     submit,
     submitAnswer,
     timeLeft,

@@ -208,6 +208,7 @@ export default function App() {
           revealed={game.revealed}
           feedback={game.feedback}
           hit={game.hit}
+          longestStreak={game.longestStreak}
           phase={game.phase}
           onStart={startGameFromGesture}
           onRestart={voice.resetToReadyFromGesture}
@@ -218,6 +219,7 @@ export default function App() {
           setDifficulty={game.setDifficulty}
           timeLeft={game.timeLeft}
           total={game.total}
+          streak={game.streak}
           pokedexEntry={game.pokedexEntry}
           showDex={game.dexVisible}
         />

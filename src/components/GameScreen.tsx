@@ -2,7 +2,7 @@ import { artworkUrl, type Pokemon } from "../data/pokemon";
 import type { PokedexEntry } from "../data/pokedex";
 import type { Difficulty, Phase } from "../hooks/usePokemonGame";
 import { getPokedexFacts } from "../utils/pokedexText";
-import { difficultyLabels, getRating, getRatingText } from "../utils/result";
+import { difficultyLabels, getRatingText } from "../utils/result";
 
 type GameScreenProps = {
   difficulty: Difficulty;
@@ -12,6 +12,7 @@ type GameScreenProps = {
   revealed: boolean;
   feedback: string;
   hit: number;
+  longestStreak: number;
   phase: Phase;
   onStart: () => void;
   onRestart: () => void;
@@ -23,6 +24,7 @@ type GameScreenProps = {
   showDex: boolean;
   timeLeft: number;
   total: number;
+  streak: number;
 };
 
 export function GameScreen({
@@ -33,6 +35,7 @@ export function GameScreen({
   revealed,
   feedback,
   hit,
+  longestStreak,
   phase,
   onStart,
   onRestart,
@@ -44,6 +47,7 @@ export function GameScreen({
   showDex,
   timeLeft,
   total,
+  streak,
 }: GameScreenProps) {
   const isReady = phase === "ready";
   const isFinished = phase === "finished";
@@ -53,8 +57,11 @@ export function GameScreen({
   const pokedexFacts = getPokedexFacts(pokedexEntry);
   const currentRoundNumber =
     phase === "correct" || phase === "skipped" || phase === "timeout" ? total : Math.min(total + 1, roundLimit);
-  const missed = roundLimit - hit;
   const accuracy = Math.round((hit / roundLimit) * 100);
+  const resultFact = pokedexFacts[0];
+  const resultNote = resultFact
+    ? `你知道吗？${pokemon.zh}：${resultFact}`
+    : "再开一局，看看下一道剪影会是谁。";
 
   return (
     <div className={`game-screen phase-${phase}`}>
@@ -83,62 +90,39 @@ export function GameScreen({
       {isFinished && (
         <div className="result-screen">
           <div className="result-pixels" aria-hidden="true">
-            {Array.from({ length: 18 }, (_, index) => (
+            {Array.from({ length: 8 }, (_, index) => (
               <span key={index} />
             ))}
           </div>
           <div className="result-header">
-            <span className="result-kicker">CHALLENGE CLEAR</span>
             <span className="result-title">挑战完成</span>
-            <span className="result-rating">{getRating(hit, roundLimit)}</span>
-            <span className="result-copy">{getRatingText(hit, roundLimit)}</span>
           </div>
           <div className="result-score-card">
             <strong>
               {hit}/{roundLimit}
             </strong>
+          </div>
+          <div className="result-summary">
+            <span className="result-rating">{getRatingText(hit, roundLimit)}</span>
+            {longestStreak >= 2 && <span className="result-streak">最长连击 x{longestStreak}</span>}
+            <p className="result-note">{resultNote}</p>
+          </div>
+          <div className="result-meta" aria-label="本局统计">
+            <span>{difficultyLabels[difficulty]}难度</span>
             <span>命中率 {accuracy}%</span>
-          </div>
-          <div className="result-stats" aria-label="本局统计">
-            <span>
-              <b>{difficultyLabels[difficulty]}</b>
-              难度
-            </span>
-            <span>
-              <b>{missed}</b>
-              未命中
-            </span>
-            <span>
-              <b>{best}</b>
-              最高
-            </span>
-          </div>
-          <div className="result-difficulty">
-            <span>下一局难度</span>
-            <div className="difficulty-picker" aria-label="选择下一局难度">
-              {(["easy", "normal", "hard"] as Difficulty[]).map((mode) => (
-                <button
-                  className={mode === difficulty ? "active" : ""}
-                  key={mode}
-                  onClick={() => setDifficulty(mode)}
-                  type="button"
-                >
-                  {difficultyLabels[mode]}
-                </button>
-              ))}
-            </div>
+            <span>最高 {String(best).padStart(2, "0")}</span>
           </div>
           <div className="result-actions">
-            <button className="share-action" onClick={onShareResult} type="button">
-              分享结果
-            </button>
             <button className="start-action" onClick={onStart} type="button">
               再来一局
             </button>
-            <button className="result-secondary-action" onClick={onRestart} type="button">
-              重新选择
+            <button className="share-action" onClick={onShareResult} type="button">
+              分享结果
             </button>
           </div>
+          <button className="result-secondary-action" onClick={onRestart} type="button">
+            换个难度
+          </button>
           {shareStatus && <span className="share-status">{shareStatus}</span>}
         </div>
       )}
@@ -164,6 +148,11 @@ export function GameScreen({
               <span style={{ width: `${timeRatio * 100}%` }} />
             </div>
             <p className={isTimeUrgent ? "timer-text urgent" : "timer-text"}>{timeLeft.toFixed(1)}s</p>
+            {streak >= 2 && (
+              <p className="combo-badge" aria-label={`当前 ${streak} 连击`}>
+                COMBO <b>x{streak}</b>
+              </p>
+            )}
             <p className="feedback">{feedback}</p>
             {showDex && (
               <div className="pokedex-panel">
