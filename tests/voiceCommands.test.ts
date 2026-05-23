@@ -6,6 +6,8 @@ describe("voice commands", () => {
   it("parses navigation and intro commands", () => {
     assert.equal(parseVoiceCommand("下一题"), "next");
     assert.equal(parseVoiceCommand("next"), "next");
+    assert.equal(parseVoiceCommand("查看结果"), "next");
+    assert.equal(parseVoiceCommand("看结果"), "next");
     assert.equal(parseVoiceCommand("跳过这一题"), "skip");
     assert.equal(parseVoiceCommand("介绍一下"), "intro");
     assert.equal(parseVoiceCommand("详细资料"), "intro");

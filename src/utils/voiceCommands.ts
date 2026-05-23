@@ -1,7 +1,7 @@
 export type VoiceCommand = "next" | "skip" | "intro" | "restart" | "mute" | "unmute";
 
 const commandPatterns: Array<[VoiceCommand, RegExp]> = [
-  ["next", /(下一题|下一个|下一個|继续|繼續|next)/i],
+  ["next", /(下一题|下一个|下一個|继续|繼續|查看结果|看结果|看成绩|结算|結果|成績|result|next)/i],
   ["skip", /(跳过|跳過|pass|skip)/i],
   ["intro", /(介绍|介紹|详细|詳細|百科|讲一下|說一下|说一下|资料|資料)/i],
   ["restart", /(重新开始|重新開始|再来一局|再來一局|restart)/i],
@@ -38,4 +38,3 @@ export function extractVoiceAnswer(text: string) {
 
   return answer;
 }
-

@@ -1,18 +1,22 @@
 import { artworkUrl, type Pokemon } from "../data/pokemon";
 import type { PokedexEntry } from "../data/pokedex";
-import type { Difficulty, Phase } from "../hooks/usePokemonGame";
+import type { Difficulty, GameMode, Phase } from "../hooks/usePokemonGame";
 import { getPokedexFacts } from "../utils/pokedexText";
-import { difficultyLabels, getRatingText } from "../utils/result";
+import { difficultyLabels, formatAverageAnswerTime, getInfiniteRank, getRatingText } from "../utils/result";
+import { IdleSilhouette } from "./IdleSilhouette";
 
 type GameScreenProps = {
   difficulty: Difficulty;
+  averageAnswerSeconds: number | null;
   best: number;
+  bestInfiniteStreak: number;
   pokemon: Pokemon;
   pokedexEntry: PokedexEntry;
   revealed: boolean;
   feedback: string;
   hit: number;
   longestStreak: number;
+  mode: GameMode;
   phase: Phase;
   onStart: () => void;
   onRestart: () => void;
@@ -21,6 +25,7 @@ type GameScreenProps = {
   roundSeconds: number;
   shareStatus: string;
   setDifficulty: (difficulty: Difficulty) => void;
+  setMode: (mode: GameMode) => void;
   showDex: boolean;
   timeLeft: number;
   total: number;
@@ -28,7 +33,9 @@ type GameScreenProps = {
 };
 
 export function GameScreen({
+  averageAnswerSeconds,
   best,
+  bestInfiniteStreak,
   difficulty,
   pokemon,
   pokedexEntry,
@@ -36,6 +43,7 @@ export function GameScreen({
   feedback,
   hit,
   longestStreak,
+  mode,
   phase,
   onStart,
   onRestart,
@@ -44,6 +52,7 @@ export function GameScreen({
   roundSeconds,
   shareStatus,
   setDifficulty,
+  setMode,
   showDex,
   timeLeft,
   total,
@@ -51,6 +60,7 @@ export function GameScreen({
 }: GameScreenProps) {
   const isReady = phase === "ready";
   const isFinished = phase === "finished";
+  const isInfinite = mode === "infinite";
   const timeRatio = Math.max(0, Math.min(1, timeLeft / roundSeconds));
   const isTimeUrgent = phase === "playing" && timeLeft <= 3;
   const shouldRevealArtwork = revealed && phase !== "entering" && phase !== "transitioning";
@@ -58,6 +68,8 @@ export function GameScreen({
   const currentRoundNumber =
     phase === "correct" || phase === "skipped" || phase === "timeout" ? total : Math.min(total + 1, roundLimit);
   const accuracy = Math.round((hit / roundLimit) * 100);
+  const infiniteRank = getInfiniteRank(hit);
+  const averageAnswerText = formatAverageAnswerTime(averageAnswerSeconds);
   const resultFact = pokedexFacts[0];
   const resultNote = resultFact
     ? `你知道吗？${pokemon.zh}：${resultFact}`
@@ -67,8 +79,24 @@ export function GameScreen({
     <div className={`game-screen phase-${phase}`}>
       {isReady && (
         <div className="start-screen">
+          <IdleSilhouette />
           <span className="start-title">我是谁？</span>
-          <p className="start-subtitle">看剪影，说出宝可梦名字</p>
+          <p className="start-subtitle">{isInfinite ? "连续答对，冲击最高连胜" : "看剪影，说出宝可梦名字"}</p>
+          <div className="mode-picker" aria-label="选择游戏模式">
+            {([
+              ["challenge", "10题挑战"],
+              ["infinite", "无限模式"],
+            ] as const).map(([nextMode, label]) => (
+              <button
+                className={nextMode === mode ? "active" : ""}
+                key={nextMode}
+                onClick={() => setMode(nextMode)}
+                type="button"
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           <div className="difficulty-picker" aria-label="选择难度">
             {(["easy", "normal", "hard"] as Difficulty[]).map((mode) => (
               <button
@@ -95,33 +123,41 @@ export function GameScreen({
             ))}
           </div>
           <div className="result-header">
-            <span className="result-title">挑战完成</span>
+            <span className="result-title">{isInfinite ? "无限挑战" : "挑战完成"}</span>
           </div>
           <div className="result-score-card">
-            <strong>
-              {hit}/{roundLimit}
-            </strong>
+            <strong>{isInfinite ? `x${hit}` : `${hit}/${roundLimit}`}</strong>
           </div>
           <div className="result-summary">
-            <span className="result-rating">{getRatingText(hit, roundLimit)}</span>
-            {longestStreak >= 2 && <span className="result-streak">最长连击 x{longestStreak}</span>}
+            <span className="result-rating">{isInfinite ? infiniteRank.title : getRatingText(hit, roundLimit)}</span>
+            {isInfinite && <span className="result-streak">{infiniteRank.badge}</span>}
+            {!isInfinite && longestStreak >= 2 && <span className="result-streak">最长连击 x{longestStreak}</span>}
             <p className="result-note">{resultNote}</p>
           </div>
           <div className="result-meta" aria-label="本局统计">
             <span>{difficultyLabels[difficulty]}难度</span>
-            <span>命中率 {accuracy}%</span>
-            <span>最高 {String(best).padStart(2, "0")}</span>
+            <span>平均 {averageAnswerText}</span>
+            {isInfinite ? (
+              <span>最高连胜 {String(bestInfiniteStreak).padStart(2, "0")}</span>
+            ) : (
+              <>
+                <span>命中率 {accuracy}%</span>
+                <span>最高 {String(best).padStart(2, "0")}</span>
+              </>
+            )}
           </div>
           <div className="result-actions">
             <button className="start-action" onClick={onStart} type="button">
               再来一局
             </button>
-            <button className="share-action" onClick={onShareResult} type="button">
-              分享结果
-            </button>
+            {!isInfinite && (
+              <button className="share-action" onClick={onShareResult} type="button">
+                分享结果
+              </button>
+            )}
           </div>
           <button className="result-secondary-action" onClick={onRestart} type="button">
-            换个难度
+            换个模式
           </button>
           {shareStatus && <span className="share-status">{shareStatus}</span>}
         </div>
@@ -141,7 +177,7 @@ export function GameScreen({
 
           <div className="prompt-panel">
             <p className="round-count">
-              第 {currentRoundNumber} / {roundLimit} 题
+              {isInfinite ? `连胜 ${hit}` : `第 ${currentRoundNumber} / ${roundLimit} 题`}
             </p>
             <p className="question">{revealed ? "就是它！" : "我是谁？"}</p>
             <div className={isTimeUrgent ? "power-meter urgent" : "power-meter"} aria-label={`剩余 ${timeLeft} 秒`}>

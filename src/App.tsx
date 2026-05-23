@@ -23,6 +23,9 @@ export default function App() {
   const [textAnswer, setTextAnswer] = useState("");
   const [shareStatus, setShareStatus] = useState("");
   const isRoundOver = game.phase === "correct" || game.phase === "skipped" || game.phase === "timeout";
+  const isInfiniteEnding = game.mode === "infinite" && (game.phase === "skipped" || game.phase === "timeout");
+  const isChallengeEnding = game.mode === "challenge" && isRoundOver && game.total >= game.roundLimit;
+  const shouldShowResultAction = isInfiniteEnding || isChallengeEnding;
   const canUseTextInput = game.phase === "playing" || isRoundOver;
 
   const enableBgmFromGesture = useCallback(() => {
@@ -168,7 +171,13 @@ export default function App() {
             </button>
           </>
         }
-        score={<ScoreDisplay hit={game.hit} total={game.total} best={game.best} />}
+        score={
+          <ScoreDisplay
+            hit={game.hit}
+            total={game.total}
+            best={game.mode === "infinite" ? game.bestInfiniteStreak : game.best}
+          />
+        }
         soundControl={
           <button
             aria-label={sfx.muted ? "开启音效" : "关闭音效"}
@@ -204,13 +213,16 @@ export default function App() {
         status={game.status}
       >
         <GameScreen
+          averageAnswerSeconds={game.averageAnswerSeconds}
           best={game.best}
+          bestInfiniteStreak={game.bestInfiniteStreak}
           difficulty={game.difficulty}
           pokemon={game.current}
           revealed={game.revealed}
           feedback={game.feedback}
           hit={game.hit}
           longestStreak={game.longestStreak}
+          mode={game.mode}
           phase={game.phase}
           onStart={startGameFromGesture}
           onRestart={voice.resetToReadyFromGesture}
@@ -219,6 +231,7 @@ export default function App() {
           roundSeconds={game.roundSeconds}
           shareStatus={shareStatus}
           setDifficulty={game.setDifficulty}
+          setMode={game.setMode}
           timeLeft={game.timeLeft}
           total={game.total}
           streak={game.streak}
@@ -241,7 +254,13 @@ export default function App() {
             aria-label="文字答题"
             disabled={!canUseTextInput}
             onChange={(event) => setTextAnswer(event.target.value)}
-            placeholder={isRoundOver ? "可输入：下一题 / 介绍一下" : "麦克风不可用时，在这里输入答案"}
+            placeholder={
+              shouldShowResultAction
+                ? "可输入：查看结果 / 介绍一下"
+                : isRoundOver
+                  ? "可输入：下一题 / 介绍一下"
+                  : "麦克风不可用时，在这里输入答案"
+            }
             type="text"
             value={textAnswer}
           />
@@ -250,7 +269,7 @@ export default function App() {
           </button>
           {isRoundOver && (
             <button className="answer-panel-secondary" onClick={voice.advanceFromGesture} type="button">
-              下一题
+              {shouldShowResultAction ? "查看结果" : "下一题"}
             </button>
           )}
           {isRoundOver && !game.dexVisible && (

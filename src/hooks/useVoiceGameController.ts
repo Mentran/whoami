@@ -15,6 +15,23 @@ function isRoundRevealed(phase: string) {
   return phase === "correct" || phase === "timeout" || phase === "skipped";
 }
 
+function isChallengeComplete(game: PokemonGame) {
+  return game.mode === "challenge" && game.total >= game.roundLimit;
+}
+
+function isInfiniteFailed(game: PokemonGame) {
+  return game.mode === "infinite" && (game.phase === "timeout" || game.phase === "skipped");
+}
+
+function shouldPromptResult(game: PokemonGame) {
+  return isChallengeComplete(game) || isInfiniteFailed(game);
+}
+
+function getRoundActionPrompt(game: PokemonGame) {
+  if (shouldPromptResult(game)) return "你可以说，查看结果，或者，介绍一下。";
+  return "你可以说，下一题，或者，介绍一下。";
+}
+
 export function useVoiceGameController(game: PokemonGame, sfx: SfxController) {
   const [speechPaused, setSpeechPaused] = useState(false);
   const [lastHeard, setLastHeard] = useState("");
@@ -179,8 +196,9 @@ export function useVoiceGameController(game: PokemonGame, sfx: SfxController) {
     setSpeechPaused(true);
     speech.stop();
     setNarrationTitle("正在播报答案...");
-    tts.speak(`答对了，就是，${game.current.zh}。你可以说，下一题，或者，介绍一下。`);
-  }, [game.current, game.phase, game.total, speech, tts]);
+    const progressText = shouldPromptResult(game) ? "挑战完成。" : game.mode === "infinite" ? "继续冲。" : "";
+    tts.speak(`答对了，就是，${game.current.zh}。${progressText}${getRoundActionPrompt(game)}`);
+  }, [game.current, game.mode, game.phase, game.roundLimit, game.total, speech, tts]);
 
   useEffect(() => {
     if (game.phase !== "timeout" && game.phase !== "skipped") {
@@ -195,8 +213,13 @@ export function useVoiceGameController(game: PokemonGame, sfx: SfxController) {
     setSpeechPaused(true);
     speech.stop();
     setNarrationTitle("正在播报答案...");
-    tts.speak(`正确答案是，${game.current.zh}。你可以说，下一题，或者，介绍一下。`);
-  }, [game.current, game.phase, game.total, speech, tts]);
+    const progressText = shouldPromptResult(game)
+      ? game.mode === "infinite"
+        ? "无限挑战结束。"
+        : "挑战完成。"
+      : "";
+    tts.speak(`正确答案是，${game.current.zh}。${progressText}${getRoundActionPrompt(game)}`);
+  }, [game.current, game.mode, game.phase, game.roundLimit, game.total, speech, tts]);
 
   useEffect(() => {
     if (game.phase === "playing") {

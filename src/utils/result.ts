@@ -28,6 +28,28 @@ export function getRatingText(hit: number, roundLimit: number) {
   return "新人训练家";
 }
 
+export function getAverageAnswerSeconds(answerTimes: number[]) {
+  if (!answerTimes.length) return null;
+
+  const total = answerTimes.reduce((sum, seconds) => sum + seconds, 0);
+  return Math.round((total / answerTimes.length) * 10) / 10;
+}
+
+export function formatAverageAnswerTime(seconds: number | null) {
+  if (seconds === null) return "--";
+  return `${seconds.toFixed(1)}s`;
+}
+
+export function getInfiniteRank(streak: number) {
+  if (streak >= 40) return { badge: "彩虹徽章", title: "剪影大师" };
+  if (streak >= 25) return { badge: "紫色徽章", title: "联盟冠军" };
+  if (streak >= 15) return { badge: "蓝色徽章", title: "图鉴达人" };
+  if (streak >= 10) return { badge: "红色徽章", title: "王牌训练家" };
+  if (streak >= 6) return { badge: "金色徽章", title: "道馆挑战者" };
+  if (streak >= 3) return { badge: "银色徽章", title: "熟练训练家" };
+  return { badge: "铜色徽章", title: "新人训练家" };
+}
+
 export function createResultText(hit: number, roundLimit: number, difficulty: Difficulty) {
   const rating = getRating(hit, roundLimit);
   const difficultyName = difficultyNames[difficulty];

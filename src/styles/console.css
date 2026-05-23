@@ -265,7 +265,61 @@
   text-align: center;
 }
 
+.idle-silhouette {
+  position: absolute;
+  inset: -24px;
+  z-index: -1;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.idle-silhouette-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: min(78%, 380px);
+  aspect-ratio: 1.2;
+  opacity: 0.58;
+  transform: translateY(4px);
+}
+
+.idle-silhouette-stage::before {
+  content: "";
+  position: absolute;
+  inset: 8% 10%;
+  background:
+    radial-gradient(circle at 50% 44%, rgba(88, 195, 52, 0.42), rgba(19, 143, 41, 0.14) 40%, transparent 70%),
+    linear-gradient(rgba(255, 255, 255, 0.08) 50%, rgba(0, 0, 0, 0.08) 50%) 0 0 / 100% 6px;
+  filter: blur(0.8px);
+}
+
+.idle-silhouette-stage::after {
+  content: "";
+  position: absolute;
+  inset: 4% 6%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.16), transparent) -140% 0 / 48% 100% no-repeat;
+  mask-image: radial-gradient(circle at 50% 50%, #000 58%, transparent 74%);
+  animation: idleSweep 5s steps(12, end) infinite;
+}
+
+.idle-silhouette-art {
+  position: relative;
+  z-index: 1;
+  width: min(72%, 250px);
+  aspect-ratio: 1;
+  object-fit: contain;
+  filter: brightness(0) contrast(1.22);
+  opacity: 0.86;
+  user-select: none;
+  animation:
+    idleSilhouetteIn 0.62s steps(8, end),
+    idleHover 2.8s ease-in-out infinite 0.62s;
+}
+
 .start-title {
+  position: relative;
   font-size: clamp(42px, 8vw, 78px);
   font-weight: 950;
   line-height: 0.95;
@@ -275,6 +329,7 @@
 }
 
 .start-subtitle {
+  position: relative;
   margin: -10px 0 0;
   color: #87e5df;
   font-size: clamp(16px, 3vw, 22px);
@@ -282,6 +337,7 @@
 }
 
 .start-action {
+  position: relative;
   padding: 10px 18px;
   border: 4px solid #fff7ea;
   border-radius: 0;
@@ -292,11 +348,28 @@
   animation: blink 1s steps(2, end) infinite;
 }
 
+.mode-picker,
 .difficulty-picker {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: 10px;
+}
+
+.mode-picker button {
+  min-width: 112px;
+  min-height: 38px;
+  border: 3px solid rgba(135, 229, 223, 0.78);
+  color: #87e5df;
+  background: rgba(15, 29, 70, 0.48);
+  font-weight: 950;
+}
+
+.mode-picker button.active {
+  color: #102241;
+  background: #87e5df;
+  box-shadow: 0 0 16px rgba(135, 229, 223, 0.38);
 }
 
 .difficulty-picker button {
@@ -712,6 +785,7 @@
 .round-button:focus-visible,
 .start-action:focus-visible,
 .share-action:focus-visible,
+.mode-picker button:focus-visible,
 .difficulty-picker button:focus-visible,
 .reset-button:focus-visible,
 .sound-button:focus-visible,
@@ -1045,6 +1119,39 @@
   }
 }
 
+@keyframes idleSilhouetteIn {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scaleY(0.08);
+  }
+
+  36% {
+    opacity: 0.96;
+    transform: translateY(-4px) scaleY(1.08);
+  }
+
+  100% {
+    opacity: 0.86;
+    transform: translateY(0) scaleY(1);
+  }
+}
+
+@keyframes idleHover {
+  50% {
+    transform: translateY(-7px) scale(1.035);
+  }
+}
+
+@keyframes idleSweep {
+  0% {
+    background-position: -140% 0;
+  }
+
+  100% {
+    background-position: 210% 0;
+  }
+}
+
 @keyframes shake {
   0%,
   100% {
@@ -1367,7 +1474,7 @@
 
   .console-top {
     min-height: 42px;
-    gap: 10px;
+    gap: 6px;
   }
 
   .led {
@@ -1391,6 +1498,15 @@
     gap: 16px;
     min-height: 190px;
     padding: 10px;
+  }
+
+  .idle-silhouette {
+    inset: -10px;
+  }
+
+  .idle-silhouette-stage {
+    width: min(92%, 300px);
+    opacity: 0.48;
   }
 
   .start-action {
